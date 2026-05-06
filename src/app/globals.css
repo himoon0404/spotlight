@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0c0c0c;
+  --foreground: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  background: #0c0c0c;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes dday-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+@keyframes dday-critical-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
+  50% { opacity: 0.65; box-shadow: 0 0 14px rgba(239, 68, 68, 0.95); }
+}
+
+.dday-urgent {
+  animation: dday-pulse 1.8s ease-in-out infinite;
+}
+.dday-critical {
+  animation: dday-critical-pulse 0.85s ease-in-out infinite;
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (min-width: 1024px) {
+  .map-area-responsive {
+    height: 100% !important;
+    flex: 1 1 0% !important;
+  }
+}
+
