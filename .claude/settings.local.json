@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); cd c:\\\\sibal; & \"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" tsc --noEmit 2>&1 | Select-Object -First 30)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000\" -TimeoutSec 3 -UseBasicParsing; Write-Host \"HTTP $\\($r.StatusCode\\)\" } catch { Write-Host \"Server not responding: $_\" })",
+      "PowerShell(Start-Process \"http://localhost:3000\")",
+      "PowerShell($env:PATH = [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"PATH\",\"User\"\\); cd c:\\\\sibal; & \"C:\\\\Program Files\\\\nodejs\\\\npx.cmd\" tsc --noEmit 2>&1)",
+      "PowerShell(try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/api/shows\" -TimeoutSec 5 -UseBasicParsing; $json = $r.Content | ConvertFrom-Json; Write-Host \"isMock: $\\($json.isMock\\)\"; Write-Host \"popular count: $\\($json.popular.Count\\)\"; Write-Host \"lastChance count: $\\($json.lastChance.Count\\)\"; Write-Host \"hidden count: $\\($json.hidden.Count\\)\"; Write-Host \"nearby count: $\\($json.nearby.Count\\)\" } catch { Write-Host \"Error: $_\" })"
+    ]
+  }
+}
