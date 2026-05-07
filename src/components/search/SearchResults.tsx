@@ -1,6 +1,6 @@
 "use client";
 
-import type { SearchShow } from "@/lib/searchMockData";
+import type { SearchShow } from "@/types/show";
 import { PerformanceCard } from "./PerformanceCard";
 
 interface Props {

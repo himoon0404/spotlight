@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Region } from "@/lib/searchMockData";
+import type { Region } from "@/lib/regionCoordinates";
 import type { MapMarker } from "@/lib/kopisRegion";
 import { ALL_REGION_DOTS } from "@/lib/regionCoordinates";
 

@@ -21,8 +21,19 @@
  */
 
 import { useState } from "react";
-import type { Venue } from "@/lib/searchMockData";
-import { NEARBY_VENUE_IDS } from "@/lib/searchMockData";
+
+export interface VenueMapItem {
+  id: string;
+  name: string;
+  shortName: string;
+  area: string;
+  x: number;
+  y: number;
+  showCount: number;
+  hasLastChance: boolean;
+  lastChanceTitle?: string;
+  lastChanceDday?: number;
+}
 
 // ── Area labels scattered on the map ─────────────────────────────────────────
 const AREA_LABELS = [
@@ -41,7 +52,7 @@ const AREA_LABELS = [
 
 // ── Single marker ─────────────────────────────────────────────────────────────
 interface MarkerProps {
-  venue: Venue;
+  venue: VenueMapItem;
   isSelected: boolean;
   isLastChance: boolean;
   isNearby: boolean;
@@ -111,7 +122,7 @@ function VenueMarker({ venue, isSelected, isLastChance, isNearby, onClick }: Mar
 
 // ── Preview card (slides up when venue selected) ──────────────────────────────
 interface PreviewProps {
-  venue: Venue | null;
+  venue: VenueMapItem | null;
   onClose: () => void;
 }
 
@@ -174,7 +185,7 @@ function VenuePreviewCard({ venue, onClose }: PreviewProps) {
 
 // ── Main map component ────────────────────────────────────────────────────────
 interface Props {
-  venues: Venue[];
+  venues: VenueMapItem[];
   selectedVenueId: string | null;
   onVenueSelect: (id: string | null) => void;
 }
@@ -264,7 +275,7 @@ export function VenueMap({ venues, selectedVenueId, onVenueSelect }: Props) {
             venue={v}
             isSelected={v.id === selectedVenueId}
             isLastChance={v.hasLastChance}
-            isNearby={nearbyMode && NEARBY_VENUE_IDS.includes(v.id)}
+            isNearby={false}
             onClick={handleMarkerClick}
           />
         ))}
@@ -296,12 +307,6 @@ export function VenueMap({ venues, selectedVenueId, onVenueSelect }: Props) {
             <span className="w-2 h-2 rounded-full bg-amber-400 block" style={{ boxShadow: "0 0 4px 2px rgba(251,191,36,0.4)" }} />
             <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>선택됨</span>
           </div>
-          {nearbyMode && (
-            <div className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-teal-400 block" />
-              <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.3)" }}>내 주변</span>
-            </div>
-          )}
         </div>
 
         {/* ── Venue preview card (slides in from bottom) ── */}

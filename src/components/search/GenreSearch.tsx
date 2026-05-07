@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { GENRES } from "@/lib/searchMockData";
-import type { SearchShow } from "@/lib/searchMockData";
+import { GENRES } from "@/lib/genres";
+import type { SearchShow } from "@/types/show";
 import { PerformanceCard } from "./PerformanceCard";
+import { VenueFilterChips } from "./VenueFilterChips";
+import { useVenueFilter } from "@/hooks/useVenueFilter";
 
 const GENRE_THEME: Record<string, string> = {
   "뮤지컬":   "teal",
@@ -73,6 +75,8 @@ export function GenreSearch({ keyword }: Props) {
   const [shows, setShows]                 = useState<SearchShow[]>([]);
   const [loading, setLoading]             = useState(false);
 
+  const { venues, selectedVenue, setSelectedVenue, venueFiltered } = useVenueFilter(shows);
+
   function handleGenreClick(name: string) {
     setSelectedGenre((prev) => (prev === name ? null : name));
   }
@@ -91,15 +95,15 @@ export function GenreSearch({ keyword }: Props) {
     return () => ctrl.abort();
   }, [selectedGenre]);
 
-  const filteredShows = keyword.trim()
-    ? shows.filter((s) => s.title.includes(keyword) || s.venue.includes(keyword))
-    : shows;
+  const keywordFiltered = keyword.trim()
+    ? venueFiltered.filter((s) => s.title.includes(keyword) || s.venue.includes(keyword))
+    : venueFiltered;
 
   return (
-    <div className="px-5">
+    <div>
 
       {/* ── 장르 그리드 ─────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 px-5">
         {Object.entries(GENRES).map(([name, { emoji }]) => {
           const active = selectedGenre === name;
           return (
@@ -132,39 +136,50 @@ export function GenreSearch({ keyword }: Props) {
       >
         {selectedGenre && (
           <div className="mt-5">
-            <div className="flex items-baseline gap-2 mb-3">
+            {/* 공연장 칩 필터 */}
+            {!loading && (
+              <VenueFilterChips
+                venues={venues}
+                selected={selectedVenue}
+                onSelect={setSelectedVenue}
+              />
+            )}
+
+            <div className="flex items-baseline gap-2 mb-3 px-5 mt-4">
               <h3 className="text-[14px] font-bold text-white">
                 {selectedGenre} 공연
               </h3>
               {!loading && (
                 <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>
-                  {filteredShows.length}개
+                  {keywordFiltered.length}개
                 </span>
               )}
             </div>
 
-            {loading ? (
-              <div className="flex flex-col gap-2.5">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-2xl animate-pulse bg-white/5" style={{ height: 116 }} />
-                ))}
-              </div>
-            ) : filteredShows.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
-                {filteredShows.map((s) => <PerformanceCard key={s.id} show={s} />)}
-              </div>
-            ) : (
-              <div className="rounded-2xl py-8 text-center"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <p className="text-3xl mb-3">🎭</p>
-                <p className="text-[13px] font-semibold mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  해당 장르의 공연이 없어요
-                </p>
-                <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>
-                  다른 장르를 선택해보세요
-                </p>
-              </div>
-            )}
+            <div className="px-5">
+              {loading ? (
+                <div className="flex flex-col gap-2.5">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded-2xl animate-pulse bg-white/5" style={{ height: 116 }} />
+                  ))}
+                </div>
+              ) : keywordFiltered.length > 0 ? (
+                <div className="flex flex-col gap-2.5">
+                  {keywordFiltered.map((s) => <PerformanceCard key={s.id} show={s} />)}
+                </div>
+              ) : (
+                <div className="rounded-2xl py-8 text-center"
+                  style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-3xl mb-3">🎭</p>
+                  <p className="text-[13px] font-semibold mb-1" style={{ color: "rgba(255,255,255,0.55)" }}>
+                    해당 장르의 공연이 없어요
+                  </p>
+                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>
+                    다른 장르를 선택해보세요
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { GENRES, EXTRA_TAGS } from "@/lib/searchMockData";
+import { GENRES, EXTRA_TAGS } from "@/lib/genres";
 
 interface Props {
   selectedGenre: string | null;

@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import type { ProcessedShow, ShowTheme } from "@/types/show";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { PosterCard } from "@/components/home/PosterCard";
-import type { ShowDetail } from "@/lib/mockShowDetails";
+import type { ShowDetail } from "@/types/show";
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 

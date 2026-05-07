@@ -2,6 +2,15 @@
 // x = (경도 - 125.5) × 84
 // y = (38.7 - 위도)  × 86
 
+export interface Region {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  showCount: number;
+  isHot?: boolean;
+}
+
 export interface RegionDot {
   id: string;
   name: string;

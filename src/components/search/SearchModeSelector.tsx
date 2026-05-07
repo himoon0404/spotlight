@@ -1,6 +1,6 @@
 "use client";
 
-import { GENRES } from "@/lib/searchMockData";
+import { GENRES } from "@/lib/genres";
 import { MAINLAND_PATH, JEJU_PATH } from "./KoreaMap";
 
 export type SearchMode = "map" | "genre";

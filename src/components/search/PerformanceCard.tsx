@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { SearchShow } from "@/lib/searchMockData";
+import type { SearchShow } from "@/types/show";
 
 const THEME: Record<string, { accent: string; bg: string; badgeBg: string; badgeBorder: string }> = {
   amber:   { accent: "#fbbf24", bg: "rgba(251,191,36,0.08)",  badgeBg: "rgba(251,191,36,0.12)",  badgeBorder: "rgba(251,191,36,0.35)"  },

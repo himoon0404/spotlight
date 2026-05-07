@@ -115,6 +115,7 @@ export async function GET(req: NextRequest) {
   const subCode   = subRegion ? (SUB_REGION_LOOKUP[subRegion]?.subCode ?? "") : "";
   const genre     = req.nextUrl.searchParams.get("genre") ?? "";
   const shcate    = GENRE_SHCATE[genre] ?? "";
+  const query     = req.nextUrl.searchParams.get("query") ?? "";
 
   const url = new URL(`${KOPIS_BASE}/pblprfr`);
   url.searchParams.set("service", apiKey);
@@ -126,8 +127,9 @@ export async function GET(req: NextRequest) {
   if (code)    url.searchParams.set("signgucode",    code);
   if (subCode) url.searchParams.set("signgucodesub", subCode);
   if (shcate)  url.searchParams.set("shcate",        shcate);
+  if (query)   url.searchParams.set("shprfnm",       query);
 
-  console.log("[/api/kopis] region=%s subRegion=%s code=%s url=%s", region, subRegion, code, url.toString());
+  console.log("[/api/kopis] region=%s subRegion=%s query=%s code=%s url=%s", region, subRegion, query, code, url.toString());
 
   try {
     const res = await fetch(url.toString(), {

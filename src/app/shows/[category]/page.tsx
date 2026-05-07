@@ -77,15 +77,15 @@ interface VenueChip {
   count: number;
 }
 
+const VENUE_CHIP_LIMIT = 6;
+
 function deriveVenueChips(shows: ProcessedShow[]): VenueChip[] {
   const counts = new Map<string, number>();
   for (const s of shows) {
     if (s.venue) counts.set(s.venue, (counts.get(s.venue) ?? 0) + 1);
   }
   return Array.from(counts.entries())
-    .filter(([, count]) => count >= 2)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
     .map(([place, count]) => ({ place, count }));
 }
 
@@ -115,6 +115,7 @@ export default function ShowsPage() {
     () => getUserPrefs()?.region ?? "서울"
   );
   const [selectedVenue, setSelectedVenue] = useState<string>("");
+  const [venueChipsExpanded, setVenueChipsExpanded] = useState(false);
 
   const prevArea = useRef(selectedArea);
 
@@ -244,11 +245,10 @@ export default function ShowsPage() {
               <div className="flex-none w-1" aria-hidden />
             </div>
 
-            {/* 공연장 칩 행 — 2개 이상 공연이 있는 공연장만, 로딩 중이거나 칩이 없으면 숨김 */}
+            {/* 공연장 칩 행 */}
             {!loading && venueChips.length > 0 && (
               <div
-                className="flex gap-2 overflow-x-auto px-5 pt-1 pb-2.5 lg:flex-wrap lg:overflow-x-visible"
-                style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                className="flex flex-wrap gap-2 px-5 pt-1 pb-2.5"
               >
                 <button
                   onClick={() => setSelectedVenue("")}
@@ -265,7 +265,7 @@ export default function ShowsPage() {
                 >
                   전체
                 </button>
-                {venueChips.map(({ place, count }) => {
+                {(venueChipsExpanded ? venueChips : venueChips.slice(0, VENUE_CHIP_LIMIT)).map(({ place, count }) => {
                   const active = selectedVenue === place;
                   return (
                     <button
@@ -283,15 +283,36 @@ export default function ShowsPage() {
                       }
                     >
                       {venueLabel(place)}
-                      <span
-                        className="ml-1 opacity-50 text-[9px]"
-                      >
-                        {count}
-                      </span>
+                      <span className="ml-1 opacity-50 text-[9px]">{count}</span>
                     </button>
                   );
                 })}
-                <div className="flex-none w-1" aria-hidden />
+                {!venueChipsExpanded && venueChips.length > VENUE_CHIP_LIMIT && (
+                  <button
+                    onClick={() => setVenueChipsExpanded(true)}
+                    className="flex-none px-3 py-1 rounded-full text-[10px] font-semibold transition-all whitespace-nowrap"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      color: "rgba(255,255,255,0.35)",
+                      border: "1px dashed rgba(255,255,255,0.12)",
+                    }}
+                  >
+                    +{venueChips.length - VENUE_CHIP_LIMIT} 더보기
+                  </button>
+                )}
+                {venueChipsExpanded && venueChips.length > VENUE_CHIP_LIMIT && (
+                  <button
+                    onClick={() => setVenueChipsExpanded(false)}
+                    className="flex-none px-3 py-1 rounded-full text-[10px] font-semibold transition-all whitespace-nowrap"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      color: "rgba(255,255,255,0.35)",
+                      border: "1px dashed rgba(255,255,255,0.12)",
+                    }}
+                  >
+                    접기
+                  </button>
+                )}
               </div>
             )}
           </div>

@@ -1,15 +1,11 @@
 /**
  * kopisRegion.ts — 지역별 공연 데이터 조회
  *
- * API 키는 이 파일에 없습니다.
  * API 키는 서버(src/app/api/kopis/route.ts)에서만 읽습니다.
  * 이 파일은 /api/kopis 로컬 엔드포인트를 호출합니다.
- *
- * API 키가 없거나 요청이 실패하면 자동으로 mock 데이터로 폴백합니다.
  */
 
-import type { SearchShow } from "./searchMockData";
-import { MOCK_SEARCH_SHOWS } from "./searchMockData";
+import type { SearchShow } from "@/types/show";
 
 // ─── 공개 인터페이스 ───────────────────────────────────────────────────────────
 
@@ -17,14 +13,14 @@ export interface Performance {
   id:        string;
   title:     string;
   place:     string;
-  startDate: string; // "2026.04.01" 형식
-  endDate:   string; // "2026.06.15" 형식
+  startDate: string;
+  endDate:   string;
   poster:    string;
   genre:     string;
   state:     string;
   region?:   string;
-  x?:        number; // SVG 좌표 (선택)
-  y?:        number; // SVG 좌표 (선택)
+  x?:        number;
+  y?:        number;
 }
 
 export interface MapMarker {
@@ -35,7 +31,7 @@ export interface MapMarker {
   performances: Performance[];
 }
 
-// ─── 지역 코드 참조표 (정보 공유용 — 실제 변환은 API 라우트에서) ───────────────
+// ─── 지역 코드 참조표 ─────────────────────────────────────────────────────────
 
 export const REGION_CODE_MAP: Record<string, string> = {
   서울: "11", 부산: "26", 대구: "27", 인천: "28",
@@ -45,7 +41,7 @@ export const REGION_CODE_MAP: Record<string, string> = {
   제주: "50",
 };
 
-// ─── KOPIS API 응답 타입 (내부용) ─────────────────────────────────────────────
+// ─── KOPIS API 응답 타입 ──────────────────────────────────────────────────────
 
 export interface KopisItem {
   id:        string;
@@ -84,12 +80,12 @@ function themeFor(genre: string): string {
 }
 
 function genreKey(genre: string): string {
-  if (genre.includes("뮤지컬"))                             return "뮤지컬";
-  if (genre.includes("연극"))                               return "연극";
-  if (genre.includes("재즈"))                               return "재즈";
+  if (genre.includes("뮤지컬"))                                                return "뮤지컬";
+  if (genre.includes("연극"))                                                  return "연극";
+  if (genre.includes("재즈"))                                                  return "재즈";
   if (genre.includes("클래식") || genre.includes("교향") || genre.includes("오페라")) return "클래식";
-  if (genre.includes("무용") || genre.includes("발레"))     return "무용";
-  if (genre.includes("국악") || genre.includes("전통"))     return "전통예술";
+  if (genre.includes("무용") || genre.includes("발레"))                        return "무용";
+  if (genre.includes("국악") || genre.includes("전통"))                        return "전통예술";
   return "인디음악";
 }
 
@@ -135,7 +131,6 @@ function kopisToPerformance(item: KopisItem): Performance {
 }
 
 // ─── 포스터 보강 ──────────────────────────────────────────────────────────────
-// 목록 API에서 poster 필드가 비어있는 항목을 상세 API로 보강합니다.
 
 async function enrichMissingPosters(items: KopisItem[]): Promise<KopisItem[]> {
   const missing = items.filter((item) => !item.poster && item.id && /^PF\d/.test(item.id));
@@ -165,64 +160,55 @@ async function enrichMissingPosters(items: KopisItem[]): Promise<KopisItem[]> {
 
 // ─── 공개 API 함수 ────────────────────────────────────────────────────────────
 
+/** 전국 공연 목록 조회 */
 export async function getPerformances(): Promise<SearchShow[]> {
-  return MOCK_SEARCH_SHOWS;
-}
-
-/**
- * 지역별 공연 조회
- *  1. /api/kopis?region=지역명 호출
- *  2. API 키 없음(NO_KEY) 또는 결과 0개 → mock 폴백
- *  3. 네트워크 오류 → mock 폴백
- */
-export async function getPerformancesByRegion(region: string): Promise<SearchShow[]> {
-  if (!REGION_CODE_MAP[region]) {
-    console.warn("[kopisRegion] 알 수 없는 지역:", region, "— mock 폴백");
-    return MOCK_SEARCH_SHOWS.filter((s) => s.region === region);
-  }
-
   try {
-    const res = await fetch(`/api/kopis?region=${encodeURIComponent(region)}`);
-
-    if (!res.ok) {
-      return MOCK_SEARCH_SHOWS.filter((s) => s.region === region);
-    }
-
+    const res = await fetch("/api/kopis");
+    if (!res.ok) return [];
     const data = (await res.json()) as { items?: KopisItem[]; error?: string };
-
-    if (data.error === "NO_KEY" || !data.items || data.items.length === 0) {
-      return MOCK_SEARCH_SHOWS.filter((s) => s.region === region);
-    }
-
+    if (data.error || !data.items || data.items.length === 0) return [];
     const enriched = await enrichMissingPosters(data.items);
     return enriched.map(kopisToSearchShow);
-
   } catch {
-    return MOCK_SEARCH_SHOWS.filter((s) => s.region === region);
+    return [];
   }
 }
 
-/**
- * 지역별 공연 조회 — Performance[] 형태로 반환 (MapMarker 구성용)
- */
-export async function getPerformancesByRegionRaw(region: string): Promise<Performance[]> {
+/** 지역별 공연 조회 */
+export async function getPerformancesByRegion(region: string): Promise<SearchShow[]> {
   if (!REGION_CODE_MAP[region]) {
+    console.warn("[kopisRegion] 알 수 없는 지역:", region);
     return [];
   }
 
   try {
     const res = await fetch(`/api/kopis?region=${encodeURIComponent(region)}`);
     if (!res.ok) return [];
-
     const data = (await res.json()) as { items?: KopisItem[]; error?: string };
     if (data.error || !data.items || data.items.length === 0) return [];
+    const enriched = await enrichMissingPosters(data.items);
+    return enriched.map(kopisToSearchShow);
+  } catch {
+    return [];
+  }
+}
 
+/** 지역별 공연 조회 — Performance[] 형태 (MapMarker 구성용) */
+export async function getPerformancesByRegionRaw(region: string): Promise<Performance[]> {
+  if (!REGION_CODE_MAP[region]) return [];
+
+  try {
+    const res = await fetch(`/api/kopis?region=${encodeURIComponent(region)}`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { items?: KopisItem[]; error?: string };
+    if (data.error || !data.items || data.items.length === 0) return [];
     return data.items.map(kopisToPerformance);
   } catch {
     return [];
   }
 }
 
+/** 마감 임박 공연 조회 */
 export async function getLastChancePerformances(region?: string): Promise<SearchShow[]> {
   const all = region
     ? await getPerformancesByRegion(region)

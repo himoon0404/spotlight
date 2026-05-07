@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { REGIONS } from "@/lib/searchMockData";
-import type { Region, SearchShow } from "@/lib/searchMockData";
+import type { SearchShow } from "@/types/show";
 import { getPerformancesByRegion } from "@/lib/kopisRegion";
 import type { MapMarker, Performance } from "@/lib/kopisRegion";
 import { ALL_REGION_DOTS } from "@/lib/regionCoordinates";
+import type { Region } from "@/lib/regionCoordinates";
 import { KoreaMap } from "@/components/search/KoreaMap";
 import { PerformanceCard } from "@/components/search/PerformanceCard";
 
@@ -179,7 +179,7 @@ export default function MapPage() {
           }}
         >
           <KoreaMap
-            regions={REGIONS}
+            regions={[]}
             selectedId={selectedRegion?.id ?? null}
             onSelect={setSelectedRegion}
             markers={markers}

@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { REGIONS } from "@/lib/searchMockData";
-import type { Region, SearchShow } from "@/lib/searchMockData";
+import type { SearchShow } from "@/types/show";
+import type { Region } from "@/lib/regionCoordinates";
 import { getPerformancesByRegion } from "@/lib/kopisRegion";
 import type { MapMarker, Performance } from "@/lib/kopisRegion";
 import { ALL_REGION_DOTS } from "@/lib/regionCoordinates";
 import { KoreaMap } from "./KoreaMap";
 import { PerformanceCard } from "./PerformanceCard";
+import { VenueFilterChips } from "./VenueFilterChips";
+import { useVenueFilter } from "@/hooks/useVenueFilter";
 
 interface Props {
   keyword: string;
@@ -34,6 +36,8 @@ export function KoreaMapSearch({ keyword }: Props) {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
+
+  const { venues, selectedVenue, setSelectedVenue, venueFiltered } = useVenueFilter(shows);
 
   useEffect(() => {
     if (!selectedRegion) {
@@ -80,8 +84,8 @@ export function KoreaMapSearch({ keyword }: Props) {
       .finally(() => setLoading(false));
   }, [selectedRegion, keyword]);
 
-  const lastChance = shows.filter((s) => s.isLastChance);
-  const regular    = shows.filter((s) => !s.isLastChance);
+  const lastChance = venueFiltered.filter((s) => s.isLastChance);
+  const regular    = venueFiltered.filter((s) => !s.isLastChance);
 
   return (
     <div>
@@ -122,7 +126,7 @@ export function KoreaMapSearch({ keyword }: Props) {
 
         {/* SVG 지도 */}
         <KoreaMap
-          regions={REGIONS}
+          regions={[]}
           selectedId={selectedRegion?.id ?? null}
           onSelect={setSelectedRegion}
           markers={markers}
@@ -131,19 +135,29 @@ export function KoreaMapSearch({ keyword }: Props) {
 
       {/* ── 결과 영역 ─────────────────────────────────────────────────────── */}
       {selectedRegion && (
-        <div className="px-5" style={{ animation: "fadeSlideUp 0.3s ease both" }}>
+        <div style={{ animation: "fadeSlideUp 0.3s ease both" }}>
 
-          <div className="flex items-baseline gap-2 mb-4">
+          {/* 공연장 칩 필터 */}
+          {!loading && !error && (
+            <VenueFilterChips
+              venues={venues}
+              selected={selectedVenue}
+              onSelect={setSelectedVenue}
+            />
+          )}
+
+          <div className="flex items-baseline gap-2 mb-4 px-5 mt-4">
             <h3 className="text-[15px] font-black text-white">
               {selectedRegion.name}에서 볼 수 있는 공연
             </h3>
             {!loading && !error && shows.length > 0 && (
               <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                {shows.length}개
+                {venueFiltered.length}개
               </span>
             )}
           </div>
 
+          <div className="px-5">
           {/* 로딩 스켈레톤 */}
           {loading && (
             <div className="flex flex-col gap-2.5">
@@ -226,7 +240,7 @@ export function KoreaMapSearch({ keyword }: Props) {
           )}
 
           {/* 결과 없음 */}
-          {!loading && !error && shows.length === 0 && (
+          {!loading && !error && venueFiltered.length === 0 && (
             <div
               className="rounded-2xl py-10 text-center"
               style={{
@@ -243,6 +257,7 @@ export function KoreaMapSearch({ keyword }: Props) {
               </p>
             </div>
           )}
+          </div>
         </div>
       )}
     </div>

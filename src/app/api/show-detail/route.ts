@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { MOCK_SHOW_DETAILS } from "@/lib/mockShowDetails";
+import type { ShowDetail } from "@/types/show";
 
 const KOPIS_BASE = "https://www.kopis.or.kr/openApi/restful";
 
@@ -40,11 +40,8 @@ export async function GET(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id_required" }, { status: 400 });
 
   const apiKey = process.env.KOPIS_API_KEY;
-
   if (!apiKey) {
-    const mock = MOCK_SHOW_DETAILS[id];
-    if (mock) return NextResponse.json(mock);
-    return NextResponse.json({ error: "not_found" }, { status: 404 });
+    return NextResponse.json({ error: "no_api_key" }, { status: 500 });
   }
 
   try {
@@ -61,44 +58,40 @@ export async function GET(req: NextRequest) {
     const db  = blocks(xml, "db")[0] ?? "";
 
     if (!db) {
-      const mock = MOCK_SHOW_DETAILS[id];
-      if (mock) return NextResponse.json(mock);
       return NextResponse.json({ error: "not_found" }, { status: 404 });
     }
 
     const rawPoster = tag(db, "poster").replace(/^http:/, "https:");
-
     const images = blocks(db, "styurl")
       .map((u) => u.trim().replace(/^http:/, "https:"))
       .filter((u) => u.startsWith("https://www.kopis.or.kr/"));
 
-    return NextResponse.json(
-      {
-        id:        tag(db, "mt20id")    || id,
-        title:     tag(db, "prfnm"),
-        venue:     tag(db, "fcltynm"),
-        venueId:   tag(db, "mt10id"),
-        startDate: tag(db, "prfpdfrom"),
-        endDate:   tag(db, "prfpdto"),
-        runtime:   tag(db, "prfruntime"),
-        age:       tag(db, "prfage"),
-        genre:     tag(db, "genrenm"),
-        cast:      tag(db, "prfcast"),
-        crew:      tag(db, "prfcrew"),
-        company:   tag(db, "entrpsnm"),
-        poster:    isValidKopisPoster(rawPoster) ? rawPoster : null,
-        state:     tag(db, "prfstate"),
-        story:     tag(db, "sty"),
-        prices:    tag(db, "pcseguidance"),
-        schedule:  tag(db, "dtguidance"),
-        area:      tag(db, "area"),
-        images:    images.length > 0 ? images : undefined,
-      },
-      { headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=86400" } }
-    );
+    const detail: ShowDetail = {
+      id:        tag(db, "mt20id")    || id,
+      title:     tag(db, "prfnm"),
+      venue:     tag(db, "fcltynm"),
+      venueId:   tag(db, "mt10id")   || undefined,
+      startDate: tag(db, "prfpdfrom"),
+      endDate:   tag(db, "prfpdto"),
+      runtime:   tag(db, "prfruntime"),
+      age:       tag(db, "prfage"),
+      genre:     tag(db, "genrenm"),
+      cast:      tag(db, "prfcast"),
+      crew:      tag(db, "prfcrew"),
+      company:   tag(db, "entrpsnm"),
+      poster:    isValidKopisPoster(rawPoster) ? rawPoster : null,
+      state:     tag(db, "prfstate"),
+      story:     tag(db, "sty"),
+      prices:    tag(db, "pcseguidance"),
+      schedule:  tag(db, "dtguidance"),
+      area:      tag(db, "area"),
+      images:    images.length > 0 ? images : undefined,
+    };
+
+    return NextResponse.json(detail, {
+      headers: { "Cache-Control": "s-maxage=1800, stale-while-revalidate=86400" },
+    });
   } catch {
-    const mock = MOCK_SHOW_DETAILS[id];
-    if (mock) return NextResponse.json(mock);
     return NextResponse.json({ error: "fetch_failed" }, { status: 500 });
   }
 }
