@@ -1,46 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { fetchShows } from "@/lib/kopis";
-import { MOCK_SHOWS, MOCK_SHOWS_FULL } from "@/lib/mockData";
-
-// KOPIS area codes
-const AREA_CODE: Record<string, string> = {
-  서울: "11",
-  경기: "41",
-  부산: "26",
-  대구: "27",
-  인천: "28",
-  광주: "29",
-  대전: "30",
-  울산: "31",
-};
+import { fetchShows, AREA_CODE } from "@/lib/kopis";
+import { SUB_REGION_LOOKUP } from "@/lib/regions";
 
 export async function GET(req: NextRequest) {
-  const area    = req.nextUrl.searchParams.get("area") ?? "서울";
-  const areaCode = AREA_CODE[area] ?? "11";
-  const full    = req.nextUrl.searchParams.get("full") === "true";
-  const genres  = req.nextUrl.searchParams.get("genres")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
-  const apiKey  = process.env.KOPIS_API_KEY;
+  const area        = req.nextUrl.searchParams.get("area") ?? "";
+  const subArea     = req.nextUrl.searchParams.get("subArea") ?? "";
+  const areaCode    = area ? (AREA_CODE[area] ?? "") : "";
+  const subAreaCode = subArea ? (SUB_REGION_LOOKUP[subArea]?.subCode ?? "") : "";
+  const full        = req.nextUrl.searchParams.get("full") === "true";
+  const genres      = req.nextUrl.searchParams.get("genres")?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
+  const apiKey      = process.env.KOPIS_API_KEY;
 
-  // No API key → serve mock immediately
   if (!apiKey) {
-    const mock = full ? MOCK_SHOWS_FULL : MOCK_SHOWS;
     return NextResponse.json(
-      { ...mock, isMock: true },
-      { headers: { "Cache-Control": "no-store" } }
+      { error: "KOPIS API 키가 설정되지 않았습니다." },
+      { status: 500 }
     );
   }
 
   try {
-    const data = await fetchShows(apiKey, areaCode, full, genres);
+    const data = await fetchShows(apiKey, areaCode, subAreaCode, full, genres);
 
-    const fallback = full ? MOCK_SHOWS_FULL : MOCK_SHOWS;
     return NextResponse.json(
       {
-        popular:    data.popular.length    ? data.popular    : fallback.popular,
-        lastChance: data.lastChance.length ? data.lastChance : fallback.lastChance,
-        hidden:     data.hidden.length     ? data.hidden     : fallback.hidden,
+        popular:    data.popular,
+        lastChance: data.lastChance,
+        hidden:     data.hidden,
         nearby:     data.nearby,
-        isMock: false,
       },
       {
         headers: {
@@ -50,7 +36,9 @@ export async function GET(req: NextRequest) {
     );
   } catch (err) {
     console.error("[kopis]", err instanceof Error ? err.message : err);
-    const mock = full ? MOCK_SHOWS_FULL : MOCK_SHOWS;
-    return NextResponse.json({ ...mock, isMock: true });
+    return NextResponse.json(
+      { error: "공연 데이터를 불러오는 데 실패했습니다." },
+      { status: 500 }
+    );
   }
 }

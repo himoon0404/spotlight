@@ -32,5 +32,4 @@ export interface ShowsPayload {
   lastChance: ProcessedShow[];
   hidden: ProcessedShow[];
   nearby: ProcessedShow[];
-  isMock?: boolean;
 }

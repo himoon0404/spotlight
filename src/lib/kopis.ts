@@ -213,16 +213,36 @@ async function enrichPosters(
 
 // ─── Main ────────────────────────────────────────────────────────────────────
 
+// Area name → KOPIS area code (used in API requests)
+export const AREA_CODE: Record<string, string> = {
+  서울: "11", 인천: "28", 경기: "41", 강원: "42",
+  충북: "43", 충남: "44", 세종: "36", 대전: "30",
+  전북: "45", 전남: "46", 광주: "29",
+  경북: "47", 대구: "27", 경남: "48", 부산: "26", 울산: "31",
+  제주: "50",
+};
+
 // KOPIS area codes → keyword that appears in the <area> tag of responses.
 // Used to post-filter results because KOPIS sometimes returns off-region shows.
+// Primary keyword matches the full official name (e.g. "전라남도" → "전라남").
 const AREA_KEYWORD: Record<string, string> = {
-  "11": "서울", "41": "경기", "26": "부산", "27": "대구",
-  "28": "인천", "29": "광주", "30": "대전", "31": "울산",
+  "11": "서울",   "28": "인천",   "41": "경기",   "42": "강원",
+  "43": "충청북", "44": "충청남", "36": "세종",   "30": "대전",
+  "45": "전라북", "46": "전라남", "29": "광주",
+  "47": "경상북", "27": "대구",  "48": "경상남", "26": "부산", "31": "울산",
+  "50": "제주",
+};
+// Short aliases for when KOPIS returns abbreviated names (e.g. "전남" instead of "전라남도").
+const AREA_SHORT: Record<string, string> = {
+  "43": "충북", "44": "충남",
+  "45": "전북", "46": "전남",
+  "47": "경북", "48": "경남",
 };
 
 export async function fetchShows(
   apiKey: string,
   areaCode = "11",
+  subAreaCode = "",
   fullView = false,
   genres: string[] = []
 ): Promise<ShowsPayload> {
@@ -274,14 +294,17 @@ export async function fetchShows(
     });
 
   // 2. LAST CHANCE — ending within 3 days ────────────────────────────────────
-  const lcXml = await kFetch("pblprfr", {
+  const lcParams: Record<string, string> = {
     service: apiKey,
     stdate: today,
     eddate: fullView ? add(7) : day3,
     cpage: "1",
     rows: fullView ? "50" : "20",
     prfstate: "02",
-  });
+  };
+  if (areaCode) lcParams.signgucode = areaCode;
+  if (subAreaCode) lcParams.signgucodesub = subAreaCode;
+  const lcXml = await kFetch("pblprfr", lcParams);
 
   const lastChance: ProcessedShow[] = blocks(lcXml, "db")
     .map(parseBlock)
@@ -303,25 +326,19 @@ export async function fetchShows(
     });
 
   // 3. Hidden gems — niche genres (dance + jazz) ────────────────────────────
+  const hiddenBase: Record<string, string> = {
+    service: apiKey,
+    stdate: today,
+    eddate: day30,
+    cpage: "1",
+    rows: "30",
+    prfstate: "02",
+  };
+  if (areaCode) hiddenBase.signgucode = areaCode;
+  if (subAreaCode) hiddenBase.signgucodesub = subAreaCode;
   const [danceXml, jazzXml] = await Promise.all([
-    kFetch("pblprfr", {
-      service: apiKey,
-      stdate: today,
-      eddate: day30,
-      cpage: "1",
-      rows: "30",
-      prfstate: "02",
-      shcate: "BBBE",
-    }),
-    kFetch("pblprfr", {
-      service: apiKey,
-      stdate: today,
-      eddate: day30,
-      cpage: "1",
-      rows: "30",
-      prfstate: "02",
-      shcate: "CCCD",
-    }),
+    kFetch("pblprfr", { ...hiddenBase, shcate: "BBBE" }),
+    kFetch("pblprfr", { ...hiddenBase, shcate: "CCCD" }),
   ]);
 
   const hidden: ProcessedShow[] = [
@@ -344,13 +361,19 @@ export async function fetchShows(
     rows: fullView ? "30" : "16",
     prfstate: "02",
   };
-  if (areaCode) nearbyParams.area = areaCode;
+  if (areaCode) nearbyParams.signgucode = areaCode;
+  if (subAreaCode) nearbyParams.signgucodesub = subAreaCode;
 
-  // Post-filter keyword: KOPIS sometimes returns off-region shows despite the
-  // area filter, so we verify each result's <area> field matches the selection.
+  // Post-filter: KOPIS sometimes returns off-region shows despite the area filter.
+  // Check both the full name prefix (e.g. "전라남") and the short alias (e.g. "전남").
   const areaKeyword = AREA_KEYWORD[areaCode] ?? "";
+  const areaShort   = AREA_SHORT[areaCode]   ?? "";
   const inArea = (s: ShowBlock) =>
-    Boolean(s.id) && (!areaKeyword || s.area.includes(areaKeyword));
+    Boolean(s.id) && (
+      !areaKeyword ||
+      s.area.includes(areaKeyword) ||
+      (areaShort && s.area.includes(areaShort))
+    );
 
   // Run base fetch + optional genre-specific fetch in parallel
   const firstShcate = genres[0] ? GENRE_SHCATE[genres[0]] : null;
@@ -507,14 +530,16 @@ export async function fetchPersonalizedLC(
   apiKey: string,
   opts: {
     areaCode: string;
+    subAreaCode?: string;
     venueId?: string;
     venueName?: string;
     areaName?: string;
     genres?: string[];
   }
 ): Promise<PersonalizedLC> {
-  const { areaCode, venueId, venueName = "", areaName = "", genres = [] } = opts;
-  const shcate = genres.length > 0 ? GENRE_SHCATE[genres[0]] : undefined;
+  const { areaCode, subAreaCode = "", venueId, venueName = "", areaName = "", genres = [] } = opts;
+  const shcate   = genres.length > 0 ? GENRE_SHCATE[genres[0]] : undefined;
+  const subExtra: Record<string, string> = subAreaCode ? { signgucodesub: subAreaCode } : {};
 
   if (venueId && shcate) {
     try {
@@ -524,12 +549,12 @@ export async function fetchPersonalizedLC(
   }
   if (shcate) {
     try {
-      const shows = await tryLC(apiKey, { area: areaCode, shcate });
+      const shows = await tryLC(apiKey, { signgucode: areaCode, shcate, ...subExtra });
       if (shows.length >= 2) return { shows, priority: 2, label: `${areaName} × ${genres[0]}` };
     } catch { /* fall */ }
   }
   try {
-    const shows = await tryLC(apiKey, { area: areaCode });
+    const shows = await tryLC(apiKey, { signgucode: areaCode, ...subExtra });
     if (shows.length >= 1) return { shows, priority: 3, label: `${areaName} 전체` };
   } catch { /* fall */ }
   try {
@@ -545,7 +570,8 @@ export async function fetchPersonalizedLC(
 export async function fetchShowsByGenre(
   apiKey: string,
   shcate: string,
-  rows = 8
+  rows = 8,
+  areaCode = ""
 ): Promise<ProcessedShow[]> {
   const now = new Date();
   const today = dateToKopis(now);
@@ -554,7 +580,7 @@ export async function fetchShowsByGenre(
   const end = dateToKopis(later);
 
   try {
-    const xml = await kFetch("pblprfr", {
+    const params: Record<string, string> = {
       service: apiKey,
       stdate: today,
       eddate: end,
@@ -562,7 +588,9 @@ export async function fetchShowsByGenre(
       rows: String(rows),
       prfstate: "02",
       shcate,
-    });
+    };
+    if (areaCode) params.area = areaCode;
+    const xml = await kFetch("pblprfr", params);
     const shows = blocks(xml, "db")
       .map(parseBlock)
       .filter((s) => s.id)

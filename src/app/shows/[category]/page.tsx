@@ -1,19 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { ProcessedShow, ShowsPayload, ShowTheme } from "@/types/show";
 import { PosterCard } from "@/components/home/PosterCard";
 import { getUserPrefs } from "@/lib/userPrefs";
+import { buildDetailUrl } from "@/app/shows/detail/[id]/page";
+import { ALL_REGIONS } from "@/lib/regions";
 
 const CATEGORY_META: Record<string, { label: string; icon?: string; redDot?: boolean }> = {
-  popular:     { label: "인기 공연",    icon: "🔥" },
+  popular:      { label: "인기 공연",     icon: "🔥" },
   "last-chance": { label: "Last Chance", redDot: true },
-  hidden:      { label: "숨은 공연 발견", icon: "✦" },
-  nearby:      { label: "근처 공연",    icon: "📍" },
+  hidden:       { label: "숨은 공연 발견", icon: "✦" },
+  nearby:       { label: "근처 공연",     icon: "📍" },
 };
-
-const AREAS = ["서울", "경기", "부산", "대구", "인천", "광주", "대전", "울산"];
 
 interface KopisItem {
   id: string;
@@ -70,26 +70,72 @@ function GridSkeleton() {
   );
 }
 
+// ─── Venue chips ──────────────────────────────────────────────────────────────
+
+interface VenueChip {
+  place: string;
+  count: number;
+}
+
+function deriveVenueChips(shows: ProcessedShow[]): VenueChip[] {
+  const counts = new Map<string, number>();
+  for (const s of shows) {
+    if (s.venue) counts.set(s.venue, (counts.get(s.venue) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([place, count]) => ({ place, count }));
+}
+
+// Truncate long venue names for chip labels
+function venueLabel(name: string): string {
+  if (name.length <= 10) return name;
+  // Try to use the last space-separated segment (e.g. "국립중앙극장 해오름극장" → "해오름극장")
+  const parts = name.split(" ");
+  if (parts.length > 1 && parts.at(-1)!.length <= 9) return parts.at(-1)!;
+  return name.slice(0, 9) + "…";
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function ShowsPage() {
   const params = useParams();
   const category = typeof params.category === "string" ? params.category : "";
   const router = useRouter();
 
-  const meta = CATEGORY_META[category] ?? { label: "공연 목록" };
+  const meta     = CATEGORY_META[category] ?? { label: "공연 목록" };
   const isNearby = category === "nearby";
 
-  const [data, setData]             = useState<ShowsPayload | null>(null);
-  const [nearbyShows, setNearbyShows] = useState<ProcessedShow[]>([]);
-  const [loading, setLoading]       = useState(true);
+  const [data,        setData]        = useState<ShowsPayload | null>(null);
+  const [allShows,    setAllShows]    = useState<ProcessedShow[]>([]);
+  const [loading,     setLoading]     = useState(true);
   const [selectedArea, setSelectedArea] = useState<string>(
     () => getUserPrefs()?.region ?? "서울"
   );
+  const [selectedVenue, setSelectedVenue] = useState<string>("");
 
   const prevArea = useRef(selectedArea);
 
+  // 공연장 칩 목록 (2개 이상 공연이 있는 공연장, 최대 6개)
+  const venueChips = useMemo(() => deriveVenueChips(allShows), [allShows]);
+
+  // 선택한 공연장으로 필터링
+  const nearbyShows = useMemo(
+    () => selectedVenue ? allShows.filter((s) => s.venue === selectedVenue) : allShows,
+    [allShows, selectedVenue]
+  );
+
+  function handleProvClick(name: string) {
+    if (name === selectedArea) return;
+    setSelectedArea(name);
+    setSelectedVenue("");
+  }
+
   useEffect(() => {
     const areaChanged = prevArea.current !== selectedArea;
-    prevArea.current = selectedArea;
+    prevArea.current  = selectedArea;
 
     if (areaChanged) setLoading(true);
 
@@ -99,7 +145,7 @@ export default function ShowsPage() {
       fetch(`/api/kopis?region=${encodeURIComponent(selectedArea)}`, { signal: ctrl.signal })
         .then((r) => r.json())
         .then(({ items = [] }: { items: KopisItem[] }) => {
-          setNearbyShows(items.map(kopisItemToShow));
+          setAllShows(items.map(kopisItemToShow));
           setLoading(false);
         })
         .catch((err) => { if (err.name !== "AbortError") setLoading(false); });
@@ -115,7 +161,7 @@ export default function ShowsPage() {
 
   const shows: ProcessedShow[] = (() => {
     if (isNearby) return nearbyShows;
-    if (!data) return [];
+    if (!data)    return [];
     switch (category) {
       case "last-chance": return data.lastChance;
       case "hidden":      return data.hidden;
@@ -123,12 +169,16 @@ export default function ShowsPage() {
     }
   })();
 
+  const areaLabel = selectedVenue
+    ? `${selectedArea} · ${venueLabel(selectedVenue)}`
+    : selectedArea;
+
   return (
-    <div className="flex flex-col min-h-screen bg-[#0c0c0c] lg:ml-[240px]">
+    <div className="flex flex-col min-h-screen bg-[#0c0c0c] lg:ml-60">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header
-        className="fixed top-0 left-0 right-0 lg:left-[240px] z-40 flex items-center gap-3 px-4 pt-5 pb-4 bg-[#0c0c0c]"
+        className="fixed top-0 left-0 right-0 lg:left-60 z-40 flex items-center gap-3 px-4 pt-5 pb-4 bg-[#0c0c0c]"
         style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
       >
         <button
@@ -139,64 +189,124 @@ export default function ShowsPage() {
           <BackIcon />
         </button>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {meta.redDot && (
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block flex-none" />
           )}
-          {meta.icon && <span className="text-sm leading-none">{meta.icon}</span>}
+          {meta.icon && <span className="text-sm leading-none flex-none">{meta.icon}</span>}
           <h1
-            className={`font-black text-white ${
+            className={`font-black text-white truncate ${
               meta.redDot
                 ? "text-[12px] tracking-[0.22em] uppercase"
                 : "text-[17px] tracking-[0.04em]"
             }`}
           >
-            {meta.label}
+            {isNearby ? areaLabel : meta.label}
           </h1>
         </div>
       </header>
 
       {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main className="flex-1 pt-[72px] pb-24 lg:pb-8">
+      <main className="flex-1 pb-24 lg:pb-8" style={{ paddingTop: isNearby ? 68 : 72 }}>
 
-        {/* Area chips — nearby only */}
+        {/* ── 시/도 칩 — nearby only ──────────────────────────────────────── */}
         {isNearby && (
           <div
-            className="flex gap-2 overflow-x-auto px-5 py-3 lg:flex-wrap lg:overflow-x-visible"
-            style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+            className="sticky z-30 bg-[#0c0c0c]"
+            style={{ top: 68, borderBottom: "1px solid rgba(255,255,255,0.05)" }}
           >
-            {AREAS.map((area) => {
-              const active = selectedArea === area;
-              return (
+            {/* 시/도 행 */}
+            <div
+              className="flex gap-2 overflow-x-auto px-5 pt-3 pb-2 lg:flex-wrap lg:overflow-x-visible"
+              style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+            >
+              {ALL_REGIONS.map((r) => {
+                const active = selectedArea === r.name;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => handleProvClick(r.name)}
+                    className="flex-none px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all"
+                    style={
+                      active
+                        ? { background: "rgba(255,255,255,0.9)", color: "#0c0c0c" }
+                        : {
+                            background: "rgba(255,255,255,0.04)",
+                            color: "rgba(255,255,255,0.4)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                          }
+                    }
+                  >
+                    {r.name}
+                  </button>
+                );
+              })}
+              <div className="flex-none w-1" aria-hidden />
+            </div>
+
+            {/* 공연장 칩 행 — 2개 이상 공연이 있는 공연장만, 로딩 중이거나 칩이 없으면 숨김 */}
+            {!loading && venueChips.length > 0 && (
+              <div
+                className="flex gap-2 overflow-x-auto px-5 pt-1 pb-2.5 lg:flex-wrap lg:overflow-x-visible"
+                style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+              >
                 <button
-                  key={area}
-                  onClick={() => setSelectedArea(area)}
-                  className="flex-none px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all"
+                  onClick={() => setSelectedVenue("")}
+                  className="flex-none px-3 py-1 rounded-full text-[10px] font-bold transition-all"
                   style={
-                    active
-                      ? { background: "rgba(255,255,255,0.9)", color: "#0c0c0c" }
+                    selectedVenue === ""
+                      ? { background: "#fbbf24", color: "#0c0c0c" }
                       : {
-                          background: "rgba(255,255,255,0.04)",
-                          color: "rgba(255,255,255,0.4)",
-                          border: "1px solid rgba(255,255,255,0.1)",
+                          background: "rgba(251,191,36,0.07)",
+                          color: "rgba(251,191,36,0.7)",
+                          border: "1px solid rgba(251,191,36,0.2)",
                         }
                   }
                 >
-                  {area}
+                  전체
                 </button>
-              );
-            })}
-            <div className="flex-none w-1" aria-hidden />
+                {venueChips.map(({ place, count }) => {
+                  const active = selectedVenue === place;
+                  return (
+                    <button
+                      key={place}
+                      onClick={() => setSelectedVenue(active ? "" : place)}
+                      className="flex-none px-3 py-1 rounded-full text-[10px] font-semibold transition-all whitespace-nowrap"
+                      style={
+                        active
+                          ? { background: "#fbbf24", color: "#0c0c0c" }
+                          : {
+                              background: "rgba(255,255,255,0.04)",
+                              color: "rgba(255,255,255,0.38)",
+                              border: "1px solid rgba(255,255,255,0.08)",
+                            }
+                      }
+                    >
+                      {venueLabel(place)}
+                      <span
+                        className="ml-1 opacity-50 text-[9px]"
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+                <div className="flex-none w-1" aria-hidden />
+              </div>
+            )}
           </div>
         )}
 
         {/* Count label */}
         {!loading && shows.length > 0 && (
           <p
-            className="px-5 mb-4 text-[11px]"
+            className="px-5 pt-4 mb-4 text-[11px]"
             style={{ color: "rgba(255,255,255,0.28)" }}
           >
-            총 {shows.length}개 공연
+            {isNearby
+              ? `${areaLabel} · 총 ${shows.length}개 공연`
+              : `총 ${shows.length}개 공연`
+            }
           </p>
         )}
 
@@ -207,12 +317,19 @@ export default function ShowsPage() {
             className="text-center pt-24 text-[12px]"
             style={{ color: "rgba(255,255,255,0.25)" }}
           >
-            {isNearby ? `${selectedArea}에 공연 정보가 없습니다` : "공연 정보가 없습니다"}
+            {isNearby
+              ? `${areaLabel}에 공연 정보가 없습니다`
+              : "공연 정보가 없습니다"
+            }
           </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 px-5">
             {shows.map((s) => (
-              <PosterCard key={s.id} show={s} />
+              <PosterCard
+                key={s.id}
+                show={s}
+                onClick={() => router.push(buildDetailUrl(s))}
+              />
             ))}
           </div>
         )}

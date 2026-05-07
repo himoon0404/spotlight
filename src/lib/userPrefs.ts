@@ -2,6 +2,7 @@ export interface UserPrefs {
   name: string;
   genres: string[];
   region: string;
+  subRegion?: string; // specific city within province (e.g. "전주" within "전북")
   onboarded: boolean;
 }
 

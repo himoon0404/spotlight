@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchShowsByGenre, GENRE_SHCATE } from "@/lib/kopis";
+import { fetchShowsByGenre, GENRE_SHCATE, AREA_CODE } from "@/lib/kopis";
 import type { ProcessedShow } from "@/types/show";
 
 export async function GET(req: NextRequest) {
@@ -9,6 +9,9 @@ export async function GET(req: NextRequest) {
   const genresParam = req.nextUrl.searchParams.get("genres") ?? "";
   const genres = genresParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 5);
   if (!genres.length) return NextResponse.json({});
+
+  const areaParam = req.nextUrl.searchParams.get("area") ?? "";
+  const areaCode  = areaParam ? (AREA_CODE[areaParam] ?? "") : "";
 
   // Group genres by shcate — genres sharing the same code (e.g. 재즈+인디음악 → CCCD)
   // are merged into one fetch and returned under a combined label like "재즈 · 인디음악".
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const settled = await Promise.allSettled(
     Array.from(shcateToGenres.entries()).map(async ([shcate, genreList]) => {
-      const shows = await fetchShowsByGenre(apiKey, shcate);
+      const shows = await fetchShowsByGenre(apiKey, shcate, 8, areaCode);
       const label = genreList.join(" · ");
       return [label, shows] as [string, ProcessedShow[]];
     })

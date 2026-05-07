@@ -9,6 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { SUB_REGION_LOOKUP } from "@/lib/regions";
 
 const KOPIS_BASE = "https://www.kopis.or.kr/openApi/restful";
 
@@ -108,10 +109,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const region = req.nextUrl.searchParams.get("region") ?? "";
-  const code   = REGION_CODE[region] ?? "";
-  const genre  = req.nextUrl.searchParams.get("genre") ?? "";
-  const shcate = GENRE_SHCATE[genre] ?? "";
+  const region    = req.nextUrl.searchParams.get("region") ?? "";
+  const subRegion = req.nextUrl.searchParams.get("subRegion") ?? "";
+  const code      = REGION_CODE[region] ?? "";
+  const subCode   = subRegion ? (SUB_REGION_LOOKUP[subRegion]?.subCode ?? "") : "";
+  const genre     = req.nextUrl.searchParams.get("genre") ?? "";
+  const shcate    = GENRE_SHCATE[genre] ?? "";
 
   const url = new URL(`${KOPIS_BASE}/pblprfr`);
   url.searchParams.set("service", apiKey);
@@ -120,10 +123,11 @@ export async function GET(req: NextRequest) {
   url.searchParams.set("rows",    "50");
   url.searchParams.set("cpage",   "1");
   // prfstate 제거 — 예정/공연중 모두 조회
-  if (code)   url.searchParams.set("signgucode", code);
-  if (shcate) url.searchParams.set("shcate", shcate);
+  if (code)    url.searchParams.set("signgucode",    code);
+  if (subCode) url.searchParams.set("signgucodesub", subCode);
+  if (shcate)  url.searchParams.set("shcate",        shcate);
 
-  console.log("[/api/kopis] region=%s code=%s url=%s", region, code, url.toString());
+  console.log("[/api/kopis] region=%s subRegion=%s code=%s url=%s", region, subRegion, code, url.toString());
 
   try {
     const res = await fetch(url.toString(), {

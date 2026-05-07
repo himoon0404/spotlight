@@ -21,9 +21,10 @@ const RANK_STYLE = [
 
 interface Props {
   show: CardShow;
+  onClick?: () => void;
 }
 
-export function PosterCard({ show }: Props) {
+export function PosterCard({ show, onClick }: Props) {
   const [loaded, setLoaded] = useState(false);
 
   const bg   = THEME_BG[show.theme] ?? THEME_BG.emerald;
@@ -33,6 +34,7 @@ export function PosterCard({ show }: Props) {
 
   return (
     <div
+      onClick={onClick}
       className="relative w-full rounded-2xl overflow-hidden cursor-pointer
                  active:scale-[0.97] transition-transform"
       style={{ aspectRatio: "2 / 3" }}

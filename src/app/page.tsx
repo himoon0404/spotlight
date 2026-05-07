@@ -10,6 +10,7 @@ import { PosterCard } from "@/components/home/PosterCard";
 import { GenreEditSheet } from "@/components/home/GenreEditSheet";
 import { RegionEditSheet } from "@/components/home/RegionEditSheet";
 import { VenueChips } from "@/components/filter/VenueChips";
+import { buildDetailUrl } from "@/app/shows/detail/[id]/page";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,13 @@ function BellIcon() {
 }
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const AREAS = ["서울", "경기", "부산", "대구", "인천", "광주", "대전", "울산"];
+const AREAS = [
+  "서울", "인천", "경기", "강원",
+  "충북", "충남", "세종", "대전",
+  "전북", "전남", "광주",
+  "경북", "대구", "경남", "부산", "울산",
+  "제주",
+];
 
 const GENRE_EMOJI: Record<string, string> = {
   뮤지컬: "🎭", 연극: "🎪", 재즈: "🎷", 클래식: "🎻",
@@ -100,6 +107,8 @@ function PosterRow({
 }: {
   shows: ProcessedShow[]; loading?: boolean;
 }) {
+  const router = useRouter();
+
   if (loading) {
     return (
       <div className="flex gap-3 overflow-x-auto px-5 pb-1 md:grid md:grid-cols-3 md:overflow-visible lg:grid-cols-4 xl:grid-cols-5">
@@ -121,7 +130,7 @@ function PosterRow({
     >
       {shows.map((s) => (
         <div key={s.id} className="flex-none w-[160px] md:w-auto">
-          <PosterCard show={s} />
+          <PosterCard show={s} onClick={() => router.push(buildDetailUrl(s))} />
         </div>
       ))}
       <div className="flex-none w-1 md:hidden" aria-hidden />
@@ -156,23 +165,25 @@ function PersonalizedGreeting({
   prefs,
   onPrefsChange,
   selectedArea,
+  selectedSubArea,
   onAreaChange,
 }: {
   prefs: UserPrefs;
   onPrefsChange: (updated: UserPrefs) => void;
   selectedArea: string;
-  onAreaChange: (area: string) => void;
+  selectedSubArea: string;
+  onAreaChange: (area: string, subArea: string) => void;
 }) {
   const [genreSheetOpen,  setGenreSheetOpen]  = useState(false);
   const [regionSheetOpen, setRegionSheetOpen] = useState(false);
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "좋은 아침이에요" : hour < 18 ? "안녕하세요" : "좋은 저녁이에요";
 
-  function handleRegionSave(area: string) {
-    const updated: UserPrefs = { ...prefs, region: area };
+  function handleRegionSave(area: string, subArea: string) {
+    const updated: UserPrefs = { ...prefs, region: area, subRegion: subArea || undefined };
     setUserPrefs(updated);
     onPrefsChange(updated);
-    onAreaChange(area);
+    onAreaChange(area, subArea);
     setRegionSheetOpen(false);
   }
 
@@ -213,7 +224,7 @@ function PersonalizedGreeting({
               className="text-[10px] px-2 py-0.5 rounded-full"
               style={{ color: "rgba(96,165,250,0.9)", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)" }}
             >
-              📍 {selectedArea}
+              📍 {selectedArea ? (selectedSubArea ? `${selectedSubArea}·${selectedArea}` : selectedArea) : "전체 지역"}
             </span>
             <EditButton onClick={() => setRegionSheetOpen(true)} label="공연장 지역 변경" />
           </div>
@@ -231,6 +242,7 @@ function PersonalizedGreeting({
       {regionSheetOpen && (
         <RegionEditSheet
           currentArea={selectedArea}
+          currentSubArea={selectedSubArea}
           onClose={() => setRegionSheetOpen(false)}
           onSave={handleRegionSave}
         />
@@ -394,11 +406,13 @@ export default function HomePage() {
   const [loading, setLoading]     = useState(true);
   const [prefs, setPrefs]         = useState<UserPrefs | null>(() => getUserPrefs());
   const genresKey = prefs?.genres?.join(",") ?? "";
-  const [selectedArea, setSelectedArea] = useState<string>(() => getUserPrefs()?.region ?? "서울");
-  const [loadedArea, setLoadedArea]     = useState("서울");
+  const [selectedArea,    setSelectedArea]    = useState<string>(() => getUserPrefs()?.region ?? "서울");
+  const [selectedSubArea, setSelectedSubArea] = useState<string>(() => getUserPrefs()?.subRegion ?? "");
+  const [loadedArea,      setLoadedArea]      = useState<string>(() => getUserPrefs()?.region ?? "서울");
+  const [loadedSubArea,   setLoadedSubArea]   = useState<string>(() => getUserPrefs()?.subRegion ?? "");
 
   // nearbyLoading is derived: data is ready but the requested area hasn't loaded yet
-  const nearbyLoading = !loading && data !== null && loadedArea !== selectedArea;
+  const nearbyLoading = !loading && data !== null && (loadedArea !== selectedArea || loadedSubArea !== selectedSubArea);
 
   // ── Venue filter ────────────────────────────────────────────────────────────
   const [venues, setVenues]                       = useState<Venue[]>([]);
@@ -420,12 +434,16 @@ export default function HomePage() {
   // ── Initial data load ───────────────────────────────────────────────────────
   useEffect(() => {
     const ctrl = new AbortController();
-    const initGenres = getUserPrefs()?.genres?.join(",") ?? "";
-    const qs = new URLSearchParams({ area: "서울" });
-    if (initGenres) qs.set("genres", initGenres);
+    const initPrefs   = getUserPrefs();
+    const initArea    = initPrefs?.region ?? "서울";
+    const initSubArea = initPrefs?.subRegion ?? "";
+    const initGenres  = initPrefs?.genres?.join(",") ?? "";
+    const qs = new URLSearchParams({ area: initArea });
+    if (initSubArea) qs.set("subArea", initSubArea);
+    if (initGenres)  qs.set("genres", initGenres);
     fetch(`/api/shows?${qs.toString()}`, { signal: ctrl.signal })
       .then((r) => r.json())
-      .then((d: ShowsPayload) => { setData(d); setLoadedArea("서울"); setLoading(false); })
+      .then((d: ShowsPayload) => { setData(d); setLoadedArea(initArea); setLoadedSubArea(initSubArea); setLoading(false); })
       .catch((err) => { if (err.name !== "AbortError") setLoading(false); });
     return () => ctrl.abort();
   }, []);
@@ -436,31 +454,35 @@ export default function HomePage() {
     if (isFirstArea.current) { isFirstArea.current = false; return; }
     const ctrl = new AbortController();
     const qs = new URLSearchParams({ area: selectedArea });
+    if (selectedSubArea) qs.set("subArea", selectedSubArea);
     if (genresKey) qs.set("genres", genresKey);
     fetch(`/api/shows?${qs.toString()}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((d: ShowsPayload) => {
         setData((prev) => (prev ? { ...prev, nearby: d.nearby } : d));
         setLoadedArea(selectedArea);
+        setLoadedSubArea(selectedSubArea);
       })
-      .catch((err) => { if (err.name !== "AbortError") setLoadedArea(selectedArea); });
+      .catch((err) => { if (err.name !== "AbortError") { setLoadedArea(selectedArea); setLoadedSubArea(selectedSubArea); } });
     return () => ctrl.abort();
-  }, [selectedArea, genresKey]);
+  }, [selectedArea, selectedSubArea, genresKey]);
 
   // ── Genre-specific recommendations ─────────────────────────────────────────
-  const [genreData, setGenreData]             = useState<Record<string, ProcessedShow[]>>({});
-  const [loadedGenresKey, setLoadedGenresKey] = useState("");
+  const [genreData, setGenreData]                 = useState<Record<string, ProcessedShow[]>>({});
+  const [loadedGenreDataKey, setLoadedGenreDataKey] = useState("");
+  const genreDataKey = `${genresKey}|${selectedArea}|${selectedSubArea}`;
 
-  const genreLoading = genresKey !== "" && loadedGenresKey !== genresKey;
+  const genreLoading = genresKey !== "" && loadedGenreDataKey !== genreDataKey;
 
   // lcParams encodes all LC filter inputs as a URL query string.
   // Declared here so genresKey is already in scope.
   const lcParams = useMemo(() => {
     const p = new URLSearchParams({ area: selectedArea });
+    if (selectedSubArea) p.set("subArea", selectedSubArea);
     if (selectedVenueId) { p.set("venue", selectedVenueId); p.set("venueName", selectedVenueName); }
     if (genresKey) p.set("genres", genresKey);
     return p.toString();
-  }, [selectedArea, selectedVenueId, selectedVenueName, genresKey]);
+  }, [selectedArea, selectedSubArea, selectedVenueId, selectedVenueName, genresKey]);
 
   const [personalLC, setPersonalLC]   = useState<PersonalizedLC | null>(null);
   const [lcLoadedFor, setLcLoadedFor] = useState("");
@@ -469,12 +491,15 @@ export default function HomePage() {
   useEffect(() => {
     if (!genresKey) return;
     const ctrl = new AbortController();
-    fetch(`/api/genre?genres=${encodeURIComponent(genresKey)}`, { signal: ctrl.signal })
+    const qs = new URLSearchParams({ genres: genresKey });
+    if (selectedArea)    qs.set("area", selectedArea);
+    if (selectedSubArea) qs.set("subArea", selectedSubArea);
+    fetch(`/api/genre?${qs.toString()}`, { signal: ctrl.signal })
       .then((r) => r.json())
-      .then((d: Record<string, ProcessedShow[]>) => { setGenreData(d); setLoadedGenresKey(genresKey); })
-      .catch((err) => { if (err.name !== "AbortError") setLoadedGenresKey(genresKey); });
+      .then((d: Record<string, ProcessedShow[]>) => { setGenreData(d); setLoadedGenreDataKey(genreDataKey); })
+      .catch((err) => { if (err.name !== "AbortError") setLoadedGenreDataKey(genreDataKey); });
     return () => ctrl.abort();
-  }, [genresKey]);
+  }, [genresKey, selectedArea, selectedSubArea, genreDataKey]);
 
   // ── Fetch venues when area changes ──────────────────────────────────────────
   useEffect(() => {
@@ -509,8 +534,9 @@ export default function HomePage() {
   }, [lcParams, loading]);
 
   // ── Derived display values ───────────────────────────────────────────────────
-  function handleAreaChange(area: string) {
+  function handleAreaChange(area: string, subArea = "") {
     setSelectedArea(area);
+    setSelectedSubArea(subArea);
     setSelectedVenueId(null);
     setSelectedVenueName("");
     setVenueShows([]);
@@ -541,19 +567,7 @@ export default function HomePage() {
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {data?.isMock && (
-            <span
-              className="text-[9px] font-bold tracking-widest px-2 py-1 rounded-full uppercase"
-              style={{
-                color: "rgba(251,191,36,0.7)",
-                background: "rgba(251,191,36,0.1)",
-                border: "1px solid rgba(251,191,36,0.25)",
-              }}
-            >
-              DEMO
-            </span>
-          )}
-          <button aria-label="알림" className="relative text-white/65 hover:text-white transition-colors">
+<button aria-label="알림" className="relative text-white/65 hover:text-white transition-colors">
             <BellIcon />
             <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border border-[#0c0c0c]" />
           </button>
@@ -573,6 +587,7 @@ export default function HomePage() {
               prefs={prefs}
               onPrefsChange={setPrefs}
               selectedArea={selectedArea}
+              selectedSubArea={selectedSubArea}
               onAreaChange={handleAreaChange}
             />
           )}
@@ -590,13 +605,14 @@ export default function HomePage() {
             // label may be "재즈 · 인디음악" when genres share the same KOPIS shcate code
             const firstGenre = label.split(" · ")[0];
             const emoji = GENRE_EMOJI[firstGenre] ?? "🎭";
+            const sectionTitle = selectedArea ? `${selectedArea} ${label} 추천` : `${label} 추천`;
             return (
               <section key={label} className="mt-5">
                 <div className="px-5">
                   <SectionHeader
-                    label={`${label} 추천`}
+                    label={sectionTitle}
                     icon={emoji}
-                    sub={`${prefs!.name}님 관심 장르`}
+                    sub={`${prefs!.name}님 관심 장르 · ${selectedArea || "전국"}`}
                   />
                 </div>
                 {shows.length > 0 ? (

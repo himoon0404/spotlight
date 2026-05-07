@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(curl -s \"https://www.kopis.or.kr/openApi/restful/pblprfr?service=9c6e948794244bd7b1903a34da37c56f&stdate=$\\(date +%Y%m%d\\)&eddate=$\\(date +%Y%m%d\\)&cpage=1&rows=3&prfstate=02\")",
+      "Bash(curl -v \"https://www.kopis.or.kr/openApi/restful/pblprfr?service=9c6e948794244bd7b1903a34da37c56f&stdate=20260507&eddate=20260507&cpage=1&rows=3&prfstate=02\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\sibal\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)",
+      "Read(//c/sibal/src/app/shows/detail/**)"
+    ]
+  }
+}
