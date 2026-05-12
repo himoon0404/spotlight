@@ -109,13 +109,14 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  const region    = req.nextUrl.searchParams.get("region") ?? "";
-  const subRegion = req.nextUrl.searchParams.get("subRegion") ?? "";
-  const code      = REGION_CODE[region] ?? "";
-  const subCode   = subRegion ? (SUB_REGION_LOOKUP[subRegion]?.subCode ?? "") : "";
-  const genre     = req.nextUrl.searchParams.get("genre") ?? "";
-  const shcate    = GENRE_SHCATE[genre] ?? "";
-  const query     = req.nextUrl.searchParams.get("query") ?? "";
+  const region     = req.nextUrl.searchParams.get("region") ?? "";
+  const subRegion  = req.nextUrl.searchParams.get("subRegion") ?? "";
+  const code       = REGION_CODE[region] ?? "";
+  const subCode    = subRegion ? (SUB_REGION_LOOKUP[subRegion]?.subCode ?? "") : "";
+  const genre      = req.nextUrl.searchParams.get("genre") ?? "";
+  const shcate     = GENRE_SHCATE[genre] ?? "";
+  const query      = req.nextUrl.searchParams.get("query") ?? "";
+  const venueQuery = req.nextUrl.searchParams.get("venue") ?? "";
 
   const url = new URL(`${KOPIS_BASE}/pblprfr`);
   url.searchParams.set("service", apiKey);
@@ -124,10 +125,11 @@ export async function GET(req: NextRequest) {
   url.searchParams.set("rows",    "50");
   url.searchParams.set("cpage",   "1");
   // prfstate 제거 — 예정/공연중 모두 조회
-  if (code)    url.searchParams.set("signgucode",    code);
-  if (subCode) url.searchParams.set("signgucodesub", subCode);
-  if (shcate)  url.searchParams.set("shcate",        shcate);
-  if (query)   url.searchParams.set("shprfnm",       query);
+  if (code)       url.searchParams.set("signgucode",    code);
+  if (subCode)    url.searchParams.set("signgucodesub", subCode);
+  if (shcate)     url.searchParams.set("shcate",        shcate);
+  if (query)      url.searchParams.set("shprfnm",       query);
+  if (venueQuery) url.searchParams.set("shfcltynm",     venueQuery);
 
   console.log("[/api/kopis] region=%s subRegion=%s query=%s code=%s url=%s", region, subRegion, query, code, url.toString());
 

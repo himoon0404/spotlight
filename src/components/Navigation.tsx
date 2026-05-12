@@ -38,7 +38,7 @@ const TABS = [
   { id: "home",     label: "홈",   href: "/",      icon: (f: boolean) => <HomeIcon   f={f} /> },
   { id: "search",   label: "검색", href: "/search", icon: (f: boolean) => <SearchIcon f={f} /> },
   { id: "wishlist", label: "관심", href: "#",       icon: (f: boolean) => <HeartIcon  f={f} /> },
-  { id: "my",       label: "마이", href: "#",       icon: (f: boolean) => <UserIcon   f={f} /> },
+  { id: "my",       label: "마이", href: "/guardian", icon: (f: boolean) => <UserIcon   f={f} /> },
 ] as const;
 
 export function Navigation() {
@@ -49,6 +49,7 @@ export function Navigation() {
   const activeId =
     pathname === "/" ? "home" :
     pathname.startsWith("/search") ? "search" :
+    pathname.startsWith("/guardian") ? "my" :
     null;
 
   const isMapPage = pathname.startsWith("/map");

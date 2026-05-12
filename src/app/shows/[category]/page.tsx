@@ -116,22 +116,26 @@ export default function ShowsPage() {
   );
   const [selectedVenue, setSelectedVenue] = useState<string>("");
   const [venueChipsExpanded, setVenueChipsExpanded] = useState(false);
+  const [venueSearch, setVenueSearch] = useState("");
 
   const prevArea = useRef(selectedArea);
 
   // 공연장 칩 목록 (2개 이상 공연이 있는 공연장, 최대 6개)
   const venueChips = useMemo(() => deriveVenueChips(allShows), [allShows]);
 
-  // 선택한 공연장으로 필터링
-  const nearbyShows = useMemo(
-    () => selectedVenue ? allShows.filter((s) => s.venue === selectedVenue) : allShows,
-    [allShows, selectedVenue]
-  );
+  // 공연장 칩 선택 또는 검색어로 필터링
+  const nearbyShows = useMemo(() => {
+    const q = venueSearch.trim().toLowerCase();
+    if (q) return allShows.filter((s) => s.venue?.toLowerCase().includes(q));
+    if (selectedVenue) return allShows.filter((s) => s.venue === selectedVenue);
+    return allShows;
+  }, [allShows, selectedVenue, venueSearch]);
 
   function handleProvClick(name: string) {
     if (name === selectedArea) return;
     setSelectedArea(name);
     setSelectedVenue("");
+    setVenueSearch("");
   }
 
   useEffect(() => {
@@ -245,8 +249,42 @@ export default function ShowsPage() {
               <div className="flex-none w-1" aria-hidden />
             </div>
 
+            {/* 공연장 검색 */}
+            {!loading && allShows.length > 0 && (
+              <div className="px-5 pt-1 pb-1">
+                <div className="relative">
+                  <svg
+                    width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="rgba(255,255,255,0.3)" strokeWidth="2" strokeLinecap="round"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  >
+                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={venueSearch}
+                    onChange={(e) => { setVenueSearch(e.target.value); setSelectedVenue(""); }}
+                    placeholder="공연장 이름으로 검색 (예: 퍼그샾)"
+                    className="w-full pl-7 pr-3 py-1.5 rounded-xl text-[11px] text-white placeholder:text-white/20 outline-none"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                  />
+                  {venueSearch && (
+                    <button
+                      onClick={() => setVenueSearch("")}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2"
+                      style={{ color: "rgba(255,255,255,0.3)" }}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 공연장 칩 행 */}
-            {!loading && venueChips.length > 0 && (
+            {!loading && venueChips.length > 0 && !venueSearch && (
               <div
                 className="flex flex-wrap gap-2 px-5 pt-1 pb-2.5"
               >
@@ -338,9 +376,11 @@ export default function ShowsPage() {
             className="text-center pt-24 text-[12px]"
             style={{ color: "rgba(255,255,255,0.25)" }}
           >
-            {isNearby
-              ? `${areaLabel}에 공연 정보가 없습니다`
-              : "공연 정보가 없습니다"
+            {isNearby && venueSearch
+              ? `"${venueSearch}" 공연장을 찾을 수 없습니다`
+              : isNearby
+                ? `${areaLabel}에 공연 정보가 없습니다`
+                : "공연 정보가 없습니다"
             }
           </p>
         ) : (

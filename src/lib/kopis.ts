@@ -365,12 +365,13 @@ export async function fetchShows(
   if (subAreaCode) nearbyParams.signgucodesub = subAreaCode;
 
   // Post-filter: KOPIS sometimes returns off-region shows despite the area filter.
-  // Check both the full name prefix (e.g. "전라남") and the short alias (e.g. "전남").
+  // When the area field is missing/empty we trust the signgucode we sent (don't reject).
   const areaKeyword = AREA_KEYWORD[areaCode] ?? "";
   const areaShort   = AREA_SHORT[areaCode]   ?? "";
   const inArea = (s: ShowBlock) =>
     Boolean(s.id) && (
       !areaKeyword ||
+      !s.area ||            // trust KOPIS signgucode when area field is absent
       s.area.includes(areaKeyword) ||
       (areaShort && s.area.includes(areaShort))
     );
@@ -394,9 +395,25 @@ export async function fetchShows(
     .map(parseBlock)
     .filter((s) => inArea(s) && !genreIds.has(s.id));
 
-  const nearby: ProcessedShow[] = [...genreNearby, ...baseNearby]
+  let nearby: ProcessedShow[] = [...genreNearby, ...baseNearby]
     .slice(0, fullView ? 20 : 4)
     .map((s) => toProcessed(s));
+
+  // Fallback tier 1: inArea may have been too strict — retry with no area keyword check
+  // (trust whatever KOPIS returned for our signgucode)
+  if (nearby.length === 0 && areaCode) {
+    const rawAll = blocks(nearbyXml, "db")
+      .map(parseBlock)
+      .filter((s) => Boolean(s.id));
+    if (rawAll.length > 0) {
+      nearby = rawAll.slice(0, fullView ? 20 : 4).map((s) => toProcessed(s));
+    }
+  }
+
+  // Fallback tier 2: truly no shows in this area — surface popular/lastChance
+  if (nearby.length === 0) {
+    nearby = [...lastChance, ...popular].slice(0, fullView ? 20 : 4);
+  }
 
   // Enrich any shows that came back without a poster URL
   const [ep, elc, eh, en] = await Promise.all([
@@ -433,8 +450,8 @@ export interface Venue {
 
 function parseVenueBlock(b: string): Venue {
   return {
-    id:       tag(b, "fcltyCd"),
-    name:     tag(b, "fcltyNm") || tag(b, "prfnmfct"),
+    id:       tag(b, "mt10id"),
+    name:     tag(b, "fcltynm") || tag(b, "fcltyNm"),
     area:     tag(b, "sidonm"),
     district: tag(b, "gugunnm"),
     seats:    Number(tag(b, "seatscale")) || 0,
@@ -449,9 +466,9 @@ export async function fetchVenues(
     const xml = await kFetch("prfplc", {
       service: apiKey,
       cpage: "1",
-      rows: "30",
+      rows: "100",
       signgucode: areaCode,
-    }, 6_000);
+    }, 8_000);
     return blocks(xml, "db")
       .map(parseVenueBlock)
       .filter((v) => v.id && v.name);
@@ -461,6 +478,35 @@ export async function fetchVenues(
 }
 
 // ─── Venue-specific shows ─────────────────────────────────────────────────────
+
+export async function fetchShowsByVenueName(
+  apiKey: string,
+  venueName: string,
+  rows = 12
+): Promise<ProcessedShow[]> {
+  const now = new Date();
+  const today = dateToKopis(now);
+  const later = new Date(now);
+  later.setDate(now.getDate() + 90);
+  try {
+    const xml = await kFetch("pblprfr", {
+      service: apiKey,
+      stdate: today,
+      eddate: dateToKopis(later),
+      cpage: "1",
+      rows: String(rows),
+      prfstate: "02",
+      shfcltynm: venueName,
+    });
+    const shows = blocks(xml, "db")
+      .map(parseBlock)
+      .filter((s) => s.id)
+      .map((s) => toProcessed(s));
+    return enrichPosters(apiKey, shows);
+  } catch {
+    return [];
+  }
+}
 
 export async function fetchShowsByVenue(
   apiKey: string,
@@ -589,11 +635,17 @@ export async function fetchShowsByGenre(
       prfstate: "02",
       shcate,
     };
-    if (areaCode) params.area = areaCode;
+    if (areaCode) params.signgucode = areaCode;
     const xml = await kFetch("pblprfr", params);
+    const keyword = areaCode ? (AREA_KEYWORD[areaCode] ?? "") : "";
+    const short   = areaCode ? (AREA_SHORT[areaCode]   ?? "") : "";
     const shows = blocks(xml, "db")
       .map(parseBlock)
-      .filter((s) => s.id)
+      .filter((s) => {
+        if (!s.id) return false;
+        if (!keyword) return true;
+        return s.area.includes(keyword) || (short ? s.area.includes(short) : false);
+      })
       .map((s) => toProcessed(s));
     return enrichPosters(apiKey, shows);
   } catch {

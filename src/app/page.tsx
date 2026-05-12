@@ -43,6 +43,7 @@ const EVENTS = [
     desc: "봤으면 인증하세요, 경험치가 쌓입니다",
     reward: "+50 XP", rewardSub: "뱃지 「이달의 관람러」 획득",
     hint: "Lv.10 이상 → 우선 예매 혜택", cta: "인증하러 가기",
+    route: "/events/e1",
     gradBg: "linear-gradient(135deg, #1a1000 0%, #0f0800 55%, #0c0c0c 100%)",
     accentColor: "#fbbf24", accentBg: "rgba(251,191,36,0.12)", accentBorder: "rgba(251,191,36,0.35)",
   },
@@ -51,6 +52,7 @@ const EVENTS = [
     desc: "감상평 한 줄이 누군가의 공연을 결정합니다",
     reward: "티켓 2매 추첨", rewardSub: "리뷰 작성 → 6월 공연 당첨",
     hint: "지금까지 312개의 리뷰", cta: "리뷰 남기기",
+    route: "/events/review-challenge",
     gradBg: "linear-gradient(135deg, #001a08 0%, #000e04 55%, #0c0c0c 100%)",
     accentColor: "#34d399", accentBg: "rgba(52,211,153,0.12)", accentBorder: "rgba(52,211,153,0.35)",
   },
@@ -165,25 +167,31 @@ function PersonalizedGreeting({
   prefs,
   onPrefsChange,
   selectedArea,
-  selectedSubArea,
+  selectedVenueName,
   onAreaChange,
 }: {
   prefs: UserPrefs;
   onPrefsChange: (updated: UserPrefs) => void;
   selectedArea: string;
-  selectedSubArea: string;
-  onAreaChange: (area: string, subArea: string) => void;
+  selectedVenueName: string;
+  onAreaChange: (area: string, venueId: string, venueName: string) => void;
 }) {
   const [genreSheetOpen,  setGenreSheetOpen]  = useState(false);
   const [regionSheetOpen, setRegionSheetOpen] = useState(false);
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? "좋은 아침이에요" : hour < 18 ? "안녕하세요" : "좋은 저녁이에요";
 
-  function handleRegionSave(area: string, subArea: string) {
-    const updated: UserPrefs = { ...prefs, region: area, subRegion: subArea || undefined };
+  function handleRegionSave(area: string, venueId: string, venueName: string) {
+    const updated: UserPrefs = {
+      ...prefs,
+      region: area,
+      subRegion: undefined,
+      venueId: venueId || undefined,
+      venueName: venueName || undefined,
+    };
     setUserPrefs(updated);
     onPrefsChange(updated);
-    onAreaChange(area, subArea);
+    onAreaChange(area, venueId, venueName);
     setRegionSheetOpen(false);
   }
 
@@ -224,7 +232,7 @@ function PersonalizedGreeting({
               className="text-[10px] px-2 py-0.5 rounded-full"
               style={{ color: "rgba(96,165,250,0.9)", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)" }}
             >
-              📍 {selectedArea ? (selectedSubArea ? `${selectedSubArea}·${selectedArea}` : selectedArea) : "전체 지역"}
+              📍 {selectedArea ? (selectedVenueName ? `${selectedArea} · ${selectedVenueName}` : selectedArea) : "전체 지역"}
             </span>
             <EditButton onClick={() => setRegionSheetOpen(true)} label="공연장 지역 변경" />
           </div>
@@ -242,7 +250,8 @@ function PersonalizedGreeting({
       {regionSheetOpen && (
         <RegionEditSheet
           currentArea={selectedArea}
-          currentSubArea={selectedSubArea}
+          currentVenueId={prefs.venueId ?? ""}
+          currentVenueName={selectedVenueName}
           onClose={() => setRegionSheetOpen(false)}
           onSave={handleRegionSave}
         />
@@ -254,10 +263,12 @@ function PersonalizedGreeting({
 // ─── Event card ───────────────────────────────────────────────────────────────
 
 function EventCard({ ev }: { ev: typeof EVENTS[0] }) {
+  const router = useRouter();
   return (
     <div
       className="relative rounded-2xl overflow-hidden cursor-pointer active:scale-[0.985] transition-transform"
       style={{ background: ev.gradBg, border: `1px solid ${ev.accentBorder}` }}
+      onClick={() => router.push(ev.route)}
     >
       <div className="relative flex items-center gap-4 px-4 py-4">
         <div
@@ -289,6 +300,7 @@ function EventCard({ ev }: { ev: typeof EVENTS[0] }) {
               border: `1px solid ${ev.accentBorder}`,
               color: ev.accentColor,
             }}
+            onClick={(e) => { e.stopPropagation(); router.push(ev.route); }}
           >
             {ev.cta} →
           </button>
@@ -513,14 +525,23 @@ export default function HomePage() {
 
   // ── Fetch venue-specific shows ───────────────────────────────────────────────
   useEffect(() => {
-    if (!selectedVenueId) return;
+    // venueId=null 이고 venueName도 없으면 skip
+    if (selectedVenueId === null && !selectedVenueName) return;
     const ctrl = new AbortController();
-    fetch(`/api/venue-shows?venue=${encodeURIComponent(selectedVenueId)}`, { signal: ctrl.signal })
+    const qs = selectedVenueId
+      ? `venue=${encodeURIComponent(selectedVenueId)}`
+      : `venueName=${encodeURIComponent(selectedVenueName)}`;
+    fetch(`/api/venue-shows?${qs}`, { signal: ctrl.signal })
       .then((r) => r.json())
-      .then((shows: ProcessedShow[]) => { setVenueShows(shows); setVenueShowsLoadedFor(selectedVenueId); })
-      .catch((err) => { if (err.name !== "AbortError") setVenueShowsLoadedFor(selectedVenueId); });
+      .then((shows: ProcessedShow[]) => {
+        setVenueShows(shows);
+        setVenueShowsLoadedFor(selectedVenueId ?? selectedVenueName);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") setVenueShowsLoadedFor(selectedVenueId ?? selectedVenueName);
+      });
     return () => ctrl.abort();
-  }, [selectedVenueId]);
+  }, [selectedVenueId, selectedVenueName]);
 
   // ── Personalized Last Chance ─────────────────────────────────────────────────
   useEffect(() => {
@@ -534,11 +555,11 @@ export default function HomePage() {
   }, [lcParams, loading]);
 
   // ── Derived display values ───────────────────────────────────────────────────
-  function handleAreaChange(area: string, subArea = "") {
+  function handleAreaChange(area: string, venueId = "", venueName = "") {
     setSelectedArea(area);
-    setSelectedSubArea(subArea);
-    setSelectedVenueId(null);
-    setSelectedVenueName("");
+    setSelectedSubArea("");
+    setSelectedVenueId(venueId || null);
+    setSelectedVenueName(venueName);
     setVenueShows([]);
     setVenueShowsLoadedFor(null);
   }
@@ -587,7 +608,7 @@ export default function HomePage() {
               prefs={prefs}
               onPrefsChange={setPrefs}
               selectedArea={selectedArea}
-              selectedSubArea={selectedSubArea}
+              selectedVenueName={selectedVenueName}
               onAreaChange={handleAreaChange}
             />
           )}

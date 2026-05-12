@@ -1,0 +1,601 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   GuardianEvolution.css
+   SPOTLIGHT - Lighting Fairy 진화 시스템 애니메이션
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────
+   캐릭터 두둥실 떠다니는 애니메이션
+   ───────────────────────────────────────────────────────── */
+@keyframes float-bob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33%       { transform: translateY(-10px) rotate(0.5deg); }
+  66%       { transform: translateY(-6px) rotate(-0.5deg); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   외부 발광 링 펄스 (캐릭터 주변 빛)
+   ───────────────────────────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.04); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   잠긴 단계 shimmer 효과 (어두운 물결)
+   ───────────────────────────────────────────────────────── */
+@keyframes lock-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ─────────────────────────────────────────────────────────
+   단계 전환 시 등장 애니메이션 (튀어오르는 느낌)
+   ───────────────────────────────────────────────────────── */
+@keyframes stage-enter {
+  0%   { opacity: 0; transform: scale(0.88) translateY(12px); }
+  70%  { opacity: 1; transform: scale(1.02) translateY(-2px); }
+  100% { opacity: 1; transform: scale(1)    translateY(0px);  }
+}
+
+/* ─────────────────────────────────────────────────────────
+   10단계 전설 캐릭터 특수 효과 (황금빛 파동)
+   ───────────────────────────────────────────────────────── */
+@keyframes legendary-shine {
+  0%, 100% { filter: brightness(1) saturate(1) hue-rotate(0deg); }
+  50%       { filter: brightness(1.15) saturate(1.3) hue-rotate(10deg); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   10단계 외부 회전 링
+   ───────────────────────────────────────────────────────── */
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   배경 빛줄기 (무대 조명 효과)
+   ───────────────────────────────────────────────────────── */
+@keyframes spotlight-sweep {
+  0%, 100% { opacity: 0.3; transform: translateX(-5%) skewX(-5deg); }
+  50%       { opacity: 0.6; transform: translateX(5%)  skewX(5deg); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   별빛 반짝임
+   ───────────────────────────────────────────────────────── */
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.1; transform: scale(0.8); }
+  50%       { opacity: 0.8; transform: scale(1.3); }
+}
+
+/* ─────────────────────────────────────────────────────────
+   하단 구분선 빛 흘러가기
+   ───────────────────────────────────────────────────────── */
+@keyframes divider-glow {
+  0%   { background-position: -100% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* ─────────────────────────────────────────────────────────
+   유틸리티 클래스
+   ───────────────────────────────────────────────────────── */
+
+/* 캐릭터 떠다니기 */
+.float-anim {
+  animation: float-bob 3.5s ease-in-out infinite;
+}
+
+/* 발광 펄스 */
+.glow-pulse {
+  animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* 단계 전환 등장 */
+.stage-enter {
+  animation: stage-enter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 10단계 전설 효과 */
+.legendary-anim {
+  animation: legendary-shine 2.5s ease-in-out infinite;
+}
+
+/* 잠금 shimmer 배경 */
+.lock-shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    transparent                  0%,
+    rgba(255, 255, 255, 0.04)   50%,
+    transparent                 100%
+  );
+  background-size: 200% 100%;
+  animation: lock-shimmer 2.8s linear infinite;
+}
+
+/* 배경 빛줄기 */
+.spotlight-beam {
+  animation: spotlight-sweep 6s ease-in-out infinite;
+}
+
+/* 별빛 반짝임 */
+.star-twinkle {
+  animation: star-twinkle var(--duration, 2s) ease-in-out var(--delay, 0s) infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+   단계 선택 버튼
+   ───────────────────────────────────────────────────────── */
+.stage-btn {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity   0.22s ease;
+}
+
+.stage-btn:hover .stage-btn-orb {
+  transform: translateY(-4px) scale(1.1);
+}
+
+.stage-btn-orb {
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.3s ease,
+              border-color 0.3s ease,
+              background-color 0.3s ease;
+}
+
+/* ─────────────────────────────────────────────────────────
+   글래스모피즘 카드
+   ───────────────────────────────────────────────────────── */
+.glass-card {
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+}
+
+/* ─────────────────────────────────────────────────────────
+   잠긴 이미지 실루엣
+   ───────────────────────────────────────────────────────── */
+.silhouette {
+  filter: brightness(0) saturate(0) contrast(1);
+}
+
+/* ─────────────────────────────────────────────────────────
+   하단 구분선 빛 흘러가기
+   ───────────────────────────────────────────────────────── */
+.divider-animated {
+  background: linear-gradient(
+    90deg,
+    transparent        0%,
+    #D4AF3766         30%,
+    #E040FB44         50%,
+    #D4AF3766         70%,
+    transparent       100%
+  );
+  background-size: 200% 100%;
+  animation: divider-glow 4s linear infinite;
+}
+
+/* ─────────────────────────────────────────────────────────
+   Character codex timeline page
+   ───────────────────────────────────────────────────────── */
+.codex-page {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: #05050a;
+  color: #fff;
+  padding-bottom: 92px;
+}
+
+.codex-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 48% -8%, rgba(123, 31, 162, 0.34), transparent 42%),
+    radial-gradient(ellipse at 92% 28%, rgba(212, 175, 55, 0.12), transparent 36%),
+    linear-gradient(180deg, #111020 0%, #05050a 62%);
+}
+
+.codex-shell {
+  position: relative;
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 28px 16px 40px;
+}
+
+.codex-header {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.codex-kicker {
+  margin: 0 0 8px;
+  color: rgba(212, 175, 55, 0.82);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.codex-title {
+  margin: 0;
+  font-size: clamp(28px, 6vw, 48px);
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.codex-desc {
+  max-width: 520px;
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.codex-current-badge {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  border-radius: 16px;
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.codex-current-badge span {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.codex-current-badge strong {
+  color: #d4af37;
+  font-size: 13px;
+}
+
+.codex-hero {
+  display: grid;
+  gap: 16px;
+}
+
+.codex-showcase,
+.codex-detail,
+.codex-timeline-section {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.codex-showcase {
+  position: relative;
+  min-height: 330px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.codex-showcase::before {
+  content: "";
+  position: absolute;
+  inset: 12%;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--stage-soft), transparent 66%);
+  animation: glow-pulse 3.8s ease-in-out infinite;
+}
+
+.codex-spotlight {
+  position: absolute;
+  top: -20%;
+  left: 50%;
+  width: 220px;
+  height: 150%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, var(--stage-soft), transparent);
+  clip-path: polygon(36% 0, 64% 0, 100% 100%, 0 100%);
+  opacity: 0.7;
+}
+
+.codex-image-wrap {
+  position: relative;
+  width: min(76vw, 340px);
+  aspect-ratio: 1;
+}
+
+.codex-character-img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 42px rgba(0, 0, 0, 0.46)) drop-shadow(0 0 24px var(--stage-glow));
+  animation: float-bob 4.2s ease-in-out infinite;
+}
+
+.codex-showcase.locked .codex-character-img {
+  filter: brightness(0) saturate(0) opacity(0.52);
+}
+
+.codex-lock-mask {
+  position: absolute;
+  inset: 12%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.46);
+  color: rgba(255, 255, 255, 0.26);
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.18em;
+}
+
+.codex-detail {
+  padding: 22px;
+}
+
+.codex-detail-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.codex-level-pill,
+.codex-state {
+  border-radius: 100px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.codex-level-pill {
+  color: var(--stage-color);
+  border: 1px solid color-mix(in srgb, var(--stage-color) 35%, transparent);
+  background: var(--stage-soft);
+}
+
+.codex-state {
+  color: #64dcb4;
+  background: rgba(100, 220, 180, 0.1);
+  border: 1px solid rgba(100, 220, 180, 0.22);
+}
+
+.codex-state.locked {
+  color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.codex-detail h2 {
+  margin: 0 0 4px;
+  color: var(--stage-color);
+  font-size: clamp(24px, 5vw, 34px);
+  font-weight: 950;
+  letter-spacing: 0;
+}
+
+.codex-stage-title {
+  margin: 0 0 18px;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.codex-stage-desc {
+  margin: 0 0 18px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.codex-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.codex-items span {
+  color: var(--stage-color);
+  border: 1px solid color-mix(in srgb, var(--stage-color) 34%, transparent);
+  background: var(--stage-soft);
+  border-radius: 100px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.codex-items span.locked {
+  color: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.codex-xp-panel {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 14px;
+}
+
+.codex-xp-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.codex-xp-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.codex-xp-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #64dcb4, #d4af37);
+}
+
+.codex-xp-panel p {
+  margin: 9px 0 0;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 12px;
+}
+
+.codex-timeline-section {
+  margin-top: 16px;
+  padding: 18px;
+}
+
+.codex-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.codex-section-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.codex-section-head p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 12px;
+}
+
+.codex-timeline {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.codex-stage-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.codex-stage-node:hover,
+.codex-stage-node.active {
+  border-color: color-mix(in srgb, var(--stage-color) 44%, transparent);
+  background: var(--stage-soft);
+}
+
+.codex-stage-node:hover {
+  transform: translateY(-1px);
+}
+
+.codex-node-dot {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--stage-color) 40%, transparent);
+  color: var(--stage-color);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.codex-stage-node.locked .codex-node-dot {
+  color: rgba(255, 255, 255, 0.24);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.codex-node-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.codex-node-copy strong {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.codex-stage-node.locked .codex-node-copy strong {
+  color: rgba(255, 255, 255, 0.28);
+}
+
+.codex-node-copy small {
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 1024px) {
+  .codex-page {
+    padding-bottom: 0;
+  }
+
+  .codex-shell {
+    padding: 40px 32px 56px;
+  }
+
+  .codex-header {
+    flex-direction: row;
+    align-items: end;
+    justify-content: space-between;
+  }
+
+  .codex-hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+
+  .codex-showcase {
+    min-height: 520px;
+  }
+
+  .codex-detail {
+    padding: 26px;
+  }
+
+  .codex-timeline {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .codex-stage-node {
+    min-height: 118px;
+    grid-template-columns: 1fr;
+    align-content: start;
+    justify-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codex-showcase::before,
+  .codex-character-img {
+    animation: none;
+  }
+}
