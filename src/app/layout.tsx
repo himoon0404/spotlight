@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { Navigation } from "@/components/Navigation";
-import { AIChatbot } from "@/components/AIChatbot";
+import { ConditionalAIChatbot } from "@/components/ConditionalAIChatbot";
 
 const geist = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +24,7 @@ export default function RootLayout({
       <body className="min-h-full bg-[#0c0c0c] text-white antialiased">
         <Navigation />
         {children}
-        <AIChatbot />
+        <ConditionalAIChatbot />
       </body>
     </html>
   );
