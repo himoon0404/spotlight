@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from "react";
 import {
   REGIONS, Region,
   ChallengePerformance, ReviewData, ReviewStatus,
+  VerificationData, VerificationStatus, ChallengeEntryState, defaultEntryState,
   getChallengePerformances, getNextMonthRewardPerformances,
   filterChallengeEligiblePerformances, filterRewardSelectablePerformances,
-  submitReviewChallenge,
+  submitReviewChallenge, submitVerification,
 } from "@/lib/reviewChallengeService";
 import { getUserPrefs } from "@/lib/userPrefs";
 import {
@@ -17,58 +18,94 @@ import {
 import { CharacterEvolutionModal } from "@/components/guardian/CharacterEvolutionModal";
 import { CharacterGrowthCard } from "@/components/guardian/CharacterGrowthCard";
 import ReviewModal from "./ReviewModal";
+import VerificationModal from "./VerificationModal";
 import "./ReviewChallengePage.css";
 
 const REWARD_XP = 30;
-const REVIEW_STATE_KEY = "spotlight_review_challenge_states";
+const ENTRY_STATE_KEY = "spotlight_challenge_entries_v2";
 
 /* ─── 참여 단계 ─────────────────────────────────── */
 const STEPS = [
   { step: 1, label: "지역 선택 후 참여 가능한 공연 확인" },
-  { step: 2, label: "공연 관람 후 앱에서 해당 공연 선택" },
-  { step: 3, label: "100자 이상 감상평 및 별점 등록" },
-  { step: 4, label: "리뷰 검토 완료 후 XP 지급 및 추첨 자동 참여" },
-  { step: 5, label: "당첨 시 다음 달 공연 중 원하는 공연 선택" },
+  { step: 2, label: "원하는 공연에서 관람 인증 진행" },
+  { step: 3, label: "인증 완료 후 리뷰 작성" },
+  { step: 4, label: "100자 이상 감상평 및 별점 등록" },
+  { step: 5, label: "리뷰 검토 완료 후 XP 지급 및 추첨 자동 참여" },
 ];
 
 const NOTICES = [
+  "관람 인증이 완료된 공연만 리뷰 작성 가능",
+  "티켓/예매내역 이미지는 검증 목적으로만 사용",
+  "예매번호 중복 등록 불가",
   "리뷰는 공연 종료 후 7일 이내 작성 가능",
   "100자 미만 또는 도배성 리뷰는 보상 제외",
-  "티켓 추첨 결과는 6월 1일 발표",
   "당첨자는 앱 알림 및 이메일로 개별 안내",
-  "이벤트 보상은 운영 정책에 따라 변경 가능",
 ];
 
-function loadReviewStates(): Record<string, ReviewStatus> {
+/* ─── 로컬 스토리지 ──────────────────────────────── */
+function loadEntryStates(): Record<string, ChallengeEntryState> {
   if (typeof window === "undefined") return {};
   try {
-    const raw = window.localStorage.getItem(REVIEW_STATE_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, ReviewStatus>) : {};
+    const raw = window.localStorage.getItem(ENTRY_STATE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, ChallengeEntryState>) : {};
   } catch {
     return {};
   }
 }
 
-function saveReviewStates(states: Record<string, ReviewStatus>): void {
+function saveEntryStates(states: Record<string, ChallengeEntryState>): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(REVIEW_STATE_KEY, JSON.stringify(states));
+  window.localStorage.setItem(ENTRY_STATE_KEY, JSON.stringify(states));
 }
 
 function getInitialRegion(): Region {
   const prefs = getUserPrefs();
   return prefs?.region && REGIONS.includes(prefs.region as Region)
-    ? prefs.region as Region
+    ? (prefs.region as Region)
     : "서울";
 }
 
-/* ─── 리뷰 버튼 라벨 ────────────────────────────── */
-function reviewBtnLabel(status: ReviewStatus): string {
-  switch (status) {
-    case "pending":  return "검토 중...";
-    case "approved": return "보상 받기";
-    case "rewarded": return "참여 완료 ✓";
-    default:         return "리뷰 쓰기";
-  }
+/* ─── 버튼 설정 ─────────────────────────────────── */
+type BtnAction = "verify" | "review" | "claim" | "none";
+
+function getBtnConfig(entry: ChallengeEntryState): {
+  label: string;
+  cls: string;
+  disabled: boolean;
+  action: BtnAction;
+} {
+  const { verificationStatus, reviewStatus } = entry;
+
+  if (reviewStatus === "rewarded")
+    return { label: "참여 완료 ✓", cls: "rewarded", disabled: true, action: "none" };
+  if (reviewStatus === "approved")
+    return { label: "보상 받기", cls: "approved", disabled: false, action: "claim" };
+  if (reviewStatus === "pending")
+    return { label: "검토 중...", cls: "pending", disabled: true, action: "none" };
+  if (verificationStatus === "approved")
+    return { label: "리뷰 쓰기", cls: "ver-approved", disabled: false, action: "review" };
+  if (verificationStatus === "pending")
+    return { label: "인증 검토 중", cls: "ver-pending", disabled: true, action: "none" };
+  if (verificationStatus === "rejected")
+    return { label: "반려됨 · 재인증", cls: "ver-rejected", disabled: false, action: "verify" };
+  return { label: "관람 인증하기", cls: "none-state", disabled: false, action: "verify" };
+}
+
+/* ─── 뱃지 설정 ─────────────────────────────────── */
+function getStatusBadge(entry: ChallengeEntryState): { label: string; cls: string } | null {
+  const { verificationStatus, reviewStatus } = entry;
+
+  if (reviewStatus === "rewarded" || reviewStatus === "approved")
+    return { label: "참여 완료", cls: "badge-complete" };
+  if (reviewStatus === "pending")
+    return { label: "리뷰 검토 중", cls: "badge-review" };
+  if (verificationStatus === "approved")
+    return { label: "인증 완료", cls: "badge-verified" };
+  if (verificationStatus === "pending")
+    return { label: "인증 검토 중", cls: "badge-ver-pending" };
+  if (verificationStatus === "rejected")
+    return { label: "인증 반려됨", cls: "badge-rejected" };
+  return { label: "관람 인증 필요", cls: "badge-unverified" };
 }
 
 /* ─── 컴포넌트 ──────────────────────────────────── */
@@ -79,8 +116,11 @@ export default function ReviewChallengePage() {
   const [loadingChallenge, setLoadingChallenge] = useState(true);
   const [loadingNext, setLoadingNext] = useState(true);
 
-  const [reviewStates, setReviewStates] = useState<Record<string, ReviewStatus>>(() => loadReviewStates());
-  const [activeModal, setActiveModal] = useState<ChallengePerformance | null>(null);
+  const [entryStates, setEntryStates] = useState<Record<string, ChallengeEntryState>>(
+    () => loadEntryStates()
+  );
+  const [verifyModal, setVerifyModal] = useState<ChallengePerformance | null>(null);
+  const [reviewModal, setReviewModal] = useState<ChallengePerformance | null>(null);
 
   const [character, setCharacter] = useState<CharacterProgress>(() => getCharacterProgress());
   const [evolution, setEvolution] = useState<{
@@ -89,13 +129,23 @@ export default function ReviewChallengePage() {
   } | null>(null);
   const [xpBoosted, setXpBoosted] = useState(false);
 
-  const updateReviewState = useCallback((id: string, status: ReviewStatus) => {
-    setReviewStates((prev) => {
-      const next = { ...prev, [id]: status };
-      saveReviewStates(next);
-      return next;
-    });
-  }, []);
+  const getEntry = useCallback(
+    (id: string): ChallengeEntryState =>
+      entryStates[id] ?? defaultEntryState(id),
+    [entryStates]
+  );
+
+  const updateEntry = useCallback(
+    (id: string, patch: Partial<ChallengeEntryState>) => {
+      setEntryStates((prev) => {
+        const current = prev[id] ?? defaultEntryState(id);
+        const next = { ...prev, [id]: { ...current, ...patch } };
+        saveEntryStates(next);
+        return next;
+      });
+    },
+    []
+  );
 
   /* 챌린지 공연 로드 */
   useEffect(() => {
@@ -107,11 +157,13 @@ export default function ReviewChallengePage() {
           setLoadingChallenge(false);
         }
       })
-      .catch(() => { if (!ac.signal.aborted) setLoadingChallenge(false); });
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadingChallenge(false);
+      });
     return () => ac.abort();
   }, [selectedRegion]);
 
-  /* 다음 달 보상 공연 로드 (1회) */
+  /* 다음 달 보상 공연 로드 */
   useEffect(() => {
     const ac = new AbortController();
     getNextMonthRewardPerformances("전체", ac.signal)
@@ -121,37 +173,92 @@ export default function ReviewChallengePage() {
           setLoadingNext(false);
         }
       })
-      .catch(() => { if (!ac.signal.aborted) setLoadingNext(false); });
+      .catch(() => {
+        if (!ac.signal.aborted) setLoadingNext(false);
+      });
     return () => ac.abort();
   }, []);
 
+  /* 관람 인증 제출 */
+  const handleVerificationSubmit = useCallback(
+    async (data: VerificationData) => {
+      if (!verifyModal) return;
+      const id = verifyModal.id;
+      setVerifyModal(null);
+      updateEntry(id, {
+        verificationStatus: "pending",
+        reservationNumber: data.reservationNumber,
+        ticketImageUrl: data.ticketImageUrl,
+        watchedDate: data.watchedDate,
+      });
+
+      await submitVerification(id, data);
+
+      /* 시뮬레이션: 관리자 승인 (실제 서비스에서는 admin API로 교체) */
+      updateEntry(id, {
+        verificationStatus: "approved",
+        verifiedAt: new Date().toISOString(),
+      });
+    },
+    [verifyModal, updateEntry]
+  );
+
   /* 리뷰 제출 */
-  const handleReviewSubmit = useCallback(async (data: ReviewData) => {
-    if (!activeModal) return;
-    const id = activeModal.id;
-    setActiveModal(null);
-    updateReviewState(id, "pending");
+  const handleReviewSubmit = useCallback(
+    async (data: ReviewData) => {
+      if (!reviewModal) return;
+      const id = reviewModal.id;
+      setReviewModal(null);
+      updateEntry(id, {
+        reviewStatus: "pending" as ReviewStatus,
+        reviewText: data.text,
+        rating: data.rating,
+      });
 
-    await submitReviewChallenge(id, data);
+      await submitReviewChallenge(id, data);
 
-    updateReviewState(id, "approved");
-  }, [activeModal, updateReviewState]);
+      updateEntry(id, { reviewStatus: "approved" as ReviewStatus });
+    },
+    [reviewModal, updateEntry]
+  );
 
-  /* 보상 받기 클릭 */
-  const handleClaimReward = (id: string) => {
-    updateReviewState(id, "rewarded");
+  /* 보상 받기 */
+  const handleClaimReward = useCallback(
+    (id: string) => {
+      updateEntry(id, {
+        reviewStatus: "rewarded" as ReviewStatus,
+        isRewarded: true,
+        isChallengeEntered: true,
+      });
 
-    const result = grantCharacterXp(REWARD_XP, `review:${id}`);
-    setCharacter(result.progress);
+      const result = grantCharacterXp(REWARD_XP, `review:${id}`);
+      setCharacter(result.progress);
 
-    if (!result.duplicated) {
-      setXpBoosted(true);
-      window.setTimeout(() => setXpBoosted(false), 1000);
-    }
-    if (result.didLevelUp) {
-      setEvolution({ previous: result.previous, progress: result.progress });
-    }
+      if (!result.duplicated) {
+        setXpBoosted(true);
+        window.setTimeout(() => setXpBoosted(false), 1000);
+      }
+      if (result.didLevelUp) {
+        setEvolution({ previous: result.previous, progress: result.progress });
+      }
+    },
+    [updateEntry]
+  );
+
+  /* Hero CTA: 첫 번째 미인증 공연으로 인증 모달 열기 */
+  const handleHeroCta = () => {
+    const target =
+      challengePerfs.find((p) => getEntry(p.id).verificationStatus === "none") ??
+      challengePerfs[0];
+    if (target) setVerifyModal(target);
   };
+
+  const heroBtnLabel =
+    challengePerfs.length === 0
+      ? "공연 불러오는 중..."
+      : challengePerfs.some((p) => getEntry(p.id).verificationStatus === "approved")
+      ? "리뷰 쓰고 참여하기"
+      : "관람 인증하고 참여하기";
 
   return (
     <div className="rc-page">
@@ -166,12 +273,22 @@ export default function ReviewChallengePage() {
         />
       )}
 
+      {/* ── 관람 인증 모달 ───────────────────────── */}
+      {verifyModal && (
+        <VerificationModal
+          performance={verifyModal}
+          rejectionReason={getEntry(verifyModal.id).rejectionReason}
+          onSubmit={handleVerificationSubmit}
+          onClose={() => setVerifyModal(null)}
+        />
+      )}
+
       {/* ── 리뷰 모달 ────────────────────────────── */}
-      {activeModal && (
+      {reviewModal && (
         <ReviewModal
-          performance={activeModal}
+          performance={reviewModal}
           onSubmit={handleReviewSubmit}
-          onClose={() => setActiveModal(null)}
+          onClose={() => setReviewModal(null)}
         />
       )}
 
@@ -180,9 +297,9 @@ export default function ReviewChallengePage() {
         <div className="rc-hero-badge">챌린지 진행 중</div>
         <h1 className="rc-hero-title">5월 리뷰 챌린지</h1>
         <p className="rc-hero-desc">
-          지역별 숨은 공연을 발견하고 리뷰를 남겨보세요.
-          리뷰 인증 완료 시 XP와 배지를 받고,
-          추첨을 통해 다음 달 공연 티켓을 직접 선택할 수 있습니다.
+          지역별 숨은 공연을 직접 관람하고 리뷰를 남겨보세요.
+          관람 인증 후 리뷰 작성 시 XP와 배지를 받고,
+          추첨을 통해 다음 달 공연 티켓을 선택할 수 있습니다.
         </p>
         <div className="rc-hero-rewards">
           <span className="rc-hero-reward"><span>✨</span>+{REWARD_XP} XP</span>
@@ -191,10 +308,10 @@ export default function ReviewChallengePage() {
         </div>
         <button
           className="rc-hero-cta"
-          onClick={() => challengePerfs[0] && setActiveModal(challengePerfs[0])}
+          onClick={handleHeroCta}
           disabled={challengePerfs.length === 0}
         >
-          리뷰 쓰고 참여하기
+          {heroBtnLabel}
         </button>
       </section>
 
@@ -235,13 +352,14 @@ export default function ReviewChallengePage() {
               ) : (
                 <div className="rc-perf-list">
                   {challengePerfs.map((perf) => {
-                    const status = reviewStates[perf.id] ?? "idle";
+                    const entry = getEntry(perf.id);
                     return (
                       <PerfCard
                         key={perf.id}
                         perf={perf}
-                        status={status}
-                        onReview={() => setActiveModal(perf)}
+                        entry={entry}
+                        onVerify={() => setVerifyModal(perf)}
+                        onReview={() => setReviewModal(perf)}
                         onClaim={() => handleClaimReward(perf.id)}
                       />
                     );
@@ -292,10 +410,10 @@ export default function ReviewChallengePage() {
             />
             <button
               className="rc-side-cta"
-              onClick={() => challengePerfs[0] && setActiveModal(challengePerfs[0])}
+              onClick={handleHeroCta}
               disabled={challengePerfs.length === 0}
             >
-              리뷰 쓰고 참여하기
+              {heroBtnLabel}
             </button>
             <StepsCard />
             <NoticeCard />
@@ -307,10 +425,10 @@ export default function ReviewChallengePage() {
       <div className="rc-fixed-cta">
         <button
           className="rc-fixed-btn"
-          onClick={() => challengePerfs[0] && setActiveModal(challengePerfs[0])}
+          onClick={handleHeroCta}
           disabled={challengePerfs.length === 0}
         >
-          리뷰 쓰고 참여하기
+          {heroBtnLabel}
         </button>
       </div>
 
@@ -351,18 +469,22 @@ function NoticeCard() {
 
 /* ─── 공연 카드 ─────────────────────────────────── */
 function PerfCard({
-  perf, status, onReview, onClaim,
+  perf, entry, onVerify, onReview, onClaim,
 }: {
   perf: ChallengePerformance;
-  status: ReviewStatus;
+  entry: ChallengeEntryState;
+  onVerify: () => void;
   onReview: () => void;
   onClaim: () => void;
 }) {
   const [imgErr, setImgErr] = useState(false);
+  const btn = getBtnConfig(entry);
+  const badge = getStatusBadge(entry);
 
   const handleBtnClick = () => {
-    if (status === "idle")     onReview();
-    if (status === "approved") onClaim();
+    if (btn.action === "verify") onVerify();
+    else if (btn.action === "review") onReview();
+    else if (btn.action === "claim") onClaim();
   };
 
   return (
@@ -390,15 +512,21 @@ function PerfCard({
         <p className="rc-perf-meta">{perf.startDate} ~ {perf.endDate}</p>
 
         <div className="rc-perf-bottom">
-          <span className="rc-challenge-tag">챌린지 참여 가능</span>
+          {badge && (
+            <span className={`rc-verify-badge ${badge.cls}`}>{badge.label}</span>
+          )}
           <button
-            className={`rc-review-btn ${status}`}
+            className={`rc-review-btn ${btn.cls}`}
             onClick={handleBtnClick}
-            disabled={status === "pending" || status === "rewarded"}
+            disabled={btn.disabled}
           >
-            {reviewBtnLabel(status)}
+            {btn.label}
           </button>
         </div>
+
+        {entry.verificationStatus === "rejected" && entry.rejectionReason && (
+          <p className="rc-rejection-hint">반려 사유: {entry.rejectionReason}</p>
+        )}
       </div>
     </div>
   );

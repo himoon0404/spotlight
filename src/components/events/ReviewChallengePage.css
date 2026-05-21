@@ -226,28 +226,100 @@
   border: none; cursor: pointer;
   transition: all 0.2s; white-space: nowrap;
 }
-.rc-review-btn.idle {
-  background: rgba(52,211,153,0.15);
-  border: 1px solid rgba(52,211,153,0.3);
+/* 관람 인증 필요 */
+.rc-review-btn.none-state {
+  background: rgba(52,211,153,0.08);
+  border: 1px solid rgba(52,211,153,0.35);
   color: #34d399;
 }
-.rc-review-btn.idle:hover {
-  background: rgba(52,211,153,0.25);
+.rc-review-btn.none-state:hover {
+  background: rgba(52,211,153,0.18);
 }
+/* 인증 검토 중 */
+.rc-review-btn.ver-pending {
+  background: rgba(245,197,24,0.08);
+  border: 1px solid rgba(245,197,24,0.22);
+  color: #f5c518; cursor: default;
+}
+/* 인증 반려 */
+.rc-review-btn.ver-rejected {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+}
+.rc-review-btn.ver-rejected:hover {
+  background: rgba(239,68,68,0.18);
+}
+/* 인증 완료 → 리뷰 쓰기 */
+.rc-review-btn.ver-approved {
+  background: linear-gradient(135deg, rgba(52,211,153,0.25), rgba(16,185,129,0.25));
+  border: 1px solid rgba(52,211,153,0.5);
+  color: #34d399;
+  box-shadow: 0 0 8px rgba(52,211,153,0.15);
+}
+.rc-review-btn.ver-approved:hover {
+  background: linear-gradient(135deg, rgba(52,211,153,0.35), rgba(16,185,129,0.35));
+}
+/* 리뷰 검토 중 */
 .rc-review-btn.pending {
   background: rgba(245,197,24,0.1);
   border: 1px solid rgba(245,197,24,0.25);
   color: #f5c518; cursor: default;
 }
+/* 보상 받기 */
 .rc-review-btn.approved {
   background: rgba(52,211,153,0.2);
   border: 1px solid rgba(52,211,153,0.4);
   color: #34d399;
 }
+/* 참여 완료 */
 .rc-review-btn.rewarded {
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.1);
   color: rgba(255,255,255,0.35); cursor: default;
+}
+
+/* ─── 인증 상태 배지 ──────────────────────────────── */
+.rc-verify-badge {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 9px; border-radius: 100px;
+  white-space: nowrap;
+}
+.rc-verify-badge.badge-unverified {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.45);
+}
+.rc-verify-badge.badge-ver-pending {
+  background: rgba(245,197,24,0.08);
+  border: 1px solid rgba(245,197,24,0.22);
+  color: #f5c518;
+}
+.rc-verify-badge.badge-rejected {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+}
+.rc-verify-badge.badge-verified {
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.28);
+  color: #34d399;
+}
+.rc-verify-badge.badge-review {
+  background: rgba(245,197,24,0.08);
+  border: 1px solid rgba(245,197,24,0.22);
+  color: #f5c518;
+}
+.rc-verify-badge.badge-complete {
+  background: rgba(52,211,153,0.12);
+  border: 1px solid rgba(52,211,153,0.35);
+  color: #34d399;
+}
+
+/* ─── 반려 사유 힌트 ──────────────────────────────── */
+.rc-rejection-hint {
+  font-size: 11px; color: rgba(248,113,113,0.7);
+  margin: 6px 0 0; line-height: 1.4;
 }
 
 /* ─── 다음 달 공연 (가로 스크롤) ─────────────────── */

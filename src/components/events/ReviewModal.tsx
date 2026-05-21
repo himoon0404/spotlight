@@ -33,7 +33,10 @@ export default function ReviewModal({ performance, onSubmit, onClose }: Props) {
         <div className="rm-handle" />
 
         <div className="rm-header">
-          <p className="rm-event-label">5월 리뷰 챌린지</p>
+          <div className="rm-header-top">
+            <p className="rm-event-label">5월 리뷰 챌린지</p>
+            <span className="rm-verified-badge">실관람 인증 리뷰</span>
+          </div>
           <h3 className="rm-title">{performance.title}</h3>
           <p className="rm-place">{performance.place}</p>
         </div>
@@ -130,10 +133,21 @@ export default function ReviewModal({ performance, onSubmit, onClose }: Props) {
         }
 
         .rm-header { margin-bottom: 20px; }
+        .rm-header-top {
+          display: flex; align-items: center;
+          justify-content: space-between; margin-bottom: 6px;
+        }
         .rm-event-label {
           font-size: 11px; font-weight: 700;
           color: #34d399; letter-spacing: 0.06em;
-          text-transform: uppercase; margin: 0 0 6px;
+          text-transform: uppercase; margin: 0;
+        }
+        .rm-verified-badge {
+          font-size: 10px; font-weight: 700;
+          background: rgba(52,211,153,0.12);
+          border: 1px solid rgba(52,211,153,0.3);
+          color: #34d399; border-radius: 100px;
+          padding: 2px 9px; letter-spacing: 0.02em;
         }
         .rm-title {
           font-size: 17px; font-weight: 800;

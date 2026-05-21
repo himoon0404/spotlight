@@ -6,6 +6,7 @@ export const GENRES: Record<string, { emoji: string; subGenres: string[] }> = {
   인디음악: { emoji: "🎸", subGenres: ["밴드", "싱어송라이터", "어쿠스틱", "소극장 공연"] },
   무용:     { emoji: "💃", subGenres: ["현대무용", "발레", "전통무용", "스트리트댄스"] },
   전통예술: { emoji: "🪷", subGenres: ["판소리", "사물놀이", "전통춤", "국악"] },
+  어린이:   { emoji: "🧸", subGenres: ["인형극", "뮤지컬", "마술·서커스", "교육 연극"] },
 };
 
 export const EXTRA_TAGS = ["마감 임박", "숨은 공연", "리뷰 많은 공연", "가격 낮은 공연", "이벤트 있음"];

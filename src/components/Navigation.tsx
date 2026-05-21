@@ -18,6 +18,16 @@ function SearchIcon({ f }: { f: boolean }) {
     </svg>
   );
 }
+function CommunityIcon({ f }: { f: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={f ? "2.1" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" fill={f ? "currentColor" : "none"} />
+      <circle cx="9" cy="7" r="4" fill={f ? "currentColor" : "none"} />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
 function HeartIcon({ f }: { f: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill={f ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -35,21 +45,24 @@ function UserIcon({ f }: { f: boolean }) {
 }
 
 const TABS = [
-  { id: "home",     label: "홈",   href: "/",      icon: (f: boolean) => <HomeIcon   f={f} /> },
-  { id: "search",   label: "검색", href: "/search", icon: (f: boolean) => <SearchIcon f={f} /> },
-  { id: "wishlist", label: "관심", href: "#",       icon: (f: boolean) => <HeartIcon  f={f} /> },
-  { id: "my",       label: "마이", href: "/guardian", icon: (f: boolean) => <UserIcon   f={f} /> },
+  { id: "home",      label: "홈",     href: "/",          icon: (f: boolean) => <HomeIcon      f={f} /> },
+  { id: "search",    label: "검색",   href: "/search",    icon: (f: boolean) => <SearchIcon    f={f} /> },
+  { id: "community", label: "커뮤니티", href: "/community", icon: (f: boolean) => <CommunityIcon f={f} /> },
+  { id: "wishlist",  label: "관심",   href: "/wishlist",  icon: (f: boolean) => <HeartIcon     f={f} /> },
+  { id: "my",        label: "마이",   href: "/mypage",    icon: (f: boolean) => <UserIcon      f={f} /> },
 ] as const;
 
 export function Navigation() {
   const pathname = usePathname();
 
-  if (pathname.startsWith("/onboarding")) return null;
+  if (pathname.startsWith("/onboarding") || pathname.startsWith("/taste-test")) return null;
 
   const activeId =
-    pathname === "/" ? "home" :
-    pathname.startsWith("/search") ? "search" :
-    pathname.startsWith("/guardian") ? "my" :
+    pathname === "/"                    ? "home"      :
+    pathname.startsWith("/search")      ? "search"    :
+    pathname.startsWith("/community")   ? "community" :
+    pathname.startsWith("/wishlist")    ? "wishlist"  :
+    pathname.startsWith("/mypage")      ? "my"        :
     null;
 
   const isMapPage = pathname.startsWith("/map");
@@ -59,22 +72,33 @@ export function Navigation() {
       {/* 모바일: 하단 바 (지도 페이지·PC에서 숨김) */}
       {!isMapPage && (
         <nav
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0c0c0c]"
-          style={{ height: 76, borderTop: "1px solid rgba(255,255,255,0.055)" }}
+          className="lg:hidden fixed bottom-0 left-0 right-0 z-50"
+          style={{
+            height: 76,
+            background: "rgba(12,12,12,0.97)",
+            borderTop: "1px solid rgba(255,255,255,0.07)",
+            backdropFilter: "blur(16px)",
+          }}
         >
-          <div className="grid grid-cols-4 h-full">
+          <div className="grid grid-cols-5 h-full">
             {TABS.map((tab) => {
               const active = tab.id === activeId;
               return (
                 <Link
                   key={tab.id}
                   href={tab.href}
-                  className={`flex flex-col items-center justify-center gap-1 transition-colors ${
-                    active ? "text-white" : "text-white/25"
+                  className={`flex flex-col items-center justify-center gap-1 transition-all ${
+                    active ? "text-white" : "text-white/30"
                   }`}
                 >
                   {tab.icon(active)}
-                  <span className="text-[10px] font-medium tracking-wide">{tab.label}</span>
+                  <span
+                    className={`text-[10px] tracking-tight transition-all ${
+                      active ? "font-bold" : "font-medium"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
                 </Link>
               );
             })}
@@ -88,36 +112,43 @@ export function Navigation() {
         style={{ width: 240, borderRight: "1px solid rgba(255,255,255,0.07)" }}
       >
         {/* 로고 */}
-        <div className="flex items-center gap-2.5 px-6 pt-7 pb-8">
+        <div className="flex items-center gap-2.5 px-6 pt-8 pb-7">
           <span
             className="w-2 h-2 rounded-full bg-amber-400 flex-none"
-            style={{ boxShadow: "0 0 8px 2px rgba(251,191,36,0.45)" }}
+            style={{ boxShadow: "0 0 8px 2px rgba(251,191,36,0.5)" }}
           />
           <span className="text-[17px] font-black tracking-[0.22em] text-white select-none">
             SPOTLIGHT
           </span>
         </div>
 
+        {/* 구분선 */}
+        <div className="mx-5 mb-3" style={{ height: 1, background: "rgba(255,255,255,0.06)" }} />
+
         {/* 메뉴 */}
-        <div className="flex flex-col gap-0.5 px-3 flex-1">
+        <div className="flex flex-col gap-1 px-3 flex-1">
           {TABS.map((tab) => {
             const active = tab.id === activeId;
             return (
               <Link
                 key={tab.id}
                 href={tab.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+                className={`flex items-center gap-3.5 px-4 py-3.5 rounded-2xl transition-all ${
                   active
                     ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                    : "text-white/38 hover:text-white/70 hover:bg-white/5"
                 }`}
+                style={active ? { boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)" } : {}}
               >
                 {tab.icon(active)}
-                <span className="text-[14px] font-semibold">{tab.label}</span>
+                <span className={`text-[14px] ${active ? "font-bold" : "font-medium"}`}>{tab.label}</span>
               </Link>
             );
           })}
         </div>
+
+        {/* 하단 여백 */}
+        <div className="h-6" />
       </nav>
     </>
   );

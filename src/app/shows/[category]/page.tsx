@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { ProcessedShow, ShowsPayload, ShowTheme } from "@/types/show";
 import { PosterCard } from "@/components/home/PosterCard";
+import { Pagination } from "@/components/Pagination";
 import { getUserPrefs } from "@/lib/userPrefs";
 import { buildDetailUrl } from "@/app/shows/detail/[id]/page";
 import { ALL_REGIONS } from "@/lib/regions";
@@ -118,6 +119,11 @@ export default function ShowsPage() {
   const [venueChipsExpanded, setVenueChipsExpanded] = useState(false);
   const [venueSearch, setVenueSearch] = useState("");
 
+  // 페이지네이션
+  const [page, setPage] = useState(1);
+  const [nearbyTotal, setNearbyTotal] = useState(0);
+  const PAGE_SIZE = 20;
+
   const prevArea = useRef(selectedArea);
 
   // 공연장 칩 목록 (2개 이상 공연이 있는 공연장, 최대 6개)
@@ -136,21 +142,32 @@ export default function ShowsPage() {
     setSelectedArea(name);
     setSelectedVenue("");
     setVenueSearch("");
+    setPage(1);
+  }
+
+  function handleVenueSelect(venue: string) {
+    setSelectedVenue(venue);
+    setPage(1);
   }
 
   useEffect(() => {
     const areaChanged = prevArea.current !== selectedArea;
     prevArea.current  = selectedArea;
 
-    if (areaChanged) setLoading(true);
+    if (areaChanged) {
+      setLoading(true);
+      setPage(1);
+    }
 
     const ctrl = new AbortController();
 
     if (isNearby) {
-      fetch(`/api/kopis?region=${encodeURIComponent(selectedArea)}`, { signal: ctrl.signal })
+      // rows=100으로 한 번에 가져와 클라이언트 페이지네이션 + 공연장 필터 호환
+      fetch(`/api/kopis?region=${encodeURIComponent(selectedArea)}&rows=100`, { signal: ctrl.signal })
         .then((r) => r.json())
-        .then(({ items = [] }: { items: KopisItem[] }) => {
+        .then(({ items = [], total = 0 }: { items: KopisItem[]; total: number }) => {
           setAllShows(items.map(kopisItemToShow));
+          setNearbyTotal(total);
           setLoading(false);
         })
         .catch((err) => { if (err.name !== "AbortError") setLoading(false); });
@@ -164,7 +181,7 @@ export default function ShowsPage() {
     return () => ctrl.abort();
   }, [selectedArea, isNearby]);
 
-  const shows: ProcessedShow[] = (() => {
+  const fullShows: ProcessedShow[] = (() => {
     if (isNearby) return nearbyShows;
     if (!data)    return [];
     switch (category) {
@@ -173,6 +190,10 @@ export default function ShowsPage() {
       default:            return data.popular;
     }
   })();
+
+  const totalPages = Math.max(1, Math.ceil(fullShows.length / PAGE_SIZE));
+  const shows = fullShows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const displayTotal = isNearby ? nearbyTotal : fullShows.length;
 
   const areaLabel = selectedVenue
     ? `${selectedArea} · ${venueLabel(selectedVenue)}`
@@ -231,13 +252,13 @@ export default function ShowsPage() {
                   <button
                     key={r.id}
                     onClick={() => handleProvClick(r.name)}
-                    className="flex-none px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all"
+                    className="flex-none px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                     style={
                       active
                         ? { background: "rgba(255,255,255,0.9)", color: "#0c0c0c" }
                         : {
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.4)",
+                            background: "rgba(255,255,255,0.05)",
+                            color: "rgba(255,255,255,0.45)",
                             border: "1px solid rgba(255,255,255,0.1)",
                           }
                     }
@@ -289,7 +310,7 @@ export default function ShowsPage() {
                 className="flex flex-wrap gap-2 px-5 pt-1 pb-2.5"
               >
                 <button
-                  onClick={() => setSelectedVenue("")}
+                  onClick={() => handleVenueSelect("")}
                   className="flex-none px-3 py-1 rounded-full text-[10px] font-bold transition-all"
                   style={
                     selectedVenue === ""
@@ -308,20 +329,20 @@ export default function ShowsPage() {
                   return (
                     <button
                       key={place}
-                      onClick={() => setSelectedVenue(active ? "" : place)}
-                      className="flex-none px-3 py-1 rounded-full text-[10px] font-semibold transition-all whitespace-nowrap"
+                      onClick={() => handleVenueSelect(active ? "" : place)}
+                      className="flex-none px-3.5 py-1.5 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap"
                       style={
                         active
                           ? { background: "#fbbf24", color: "#0c0c0c" }
                           : {
-                              background: "rgba(255,255,255,0.04)",
-                              color: "rgba(255,255,255,0.38)",
-                              border: "1px solid rgba(255,255,255,0.08)",
+                              background: "rgba(255,255,255,0.05)",
+                              color: "rgba(255,255,255,0.45)",
+                              border: "1px solid rgba(255,255,255,0.09)",
                             }
                       }
                     >
                       {venueLabel(place)}
-                      <span className="ml-1 opacity-50 text-[9px]">{count}</span>
+                      <span className="ml-1.5 opacity-50 text-[10px]">{count}</span>
                     </button>
                   );
                 })}
@@ -357,14 +378,14 @@ export default function ShowsPage() {
         )}
 
         {/* Count label */}
-        {!loading && shows.length > 0 && (
+        {!loading && fullShows.length > 0 && (
           <p
-            className="px-5 pt-4 mb-4 text-[11px]"
-            style={{ color: "rgba(255,255,255,0.28)" }}
+            className="px-5 pt-4 mb-4 text-[12px]"
+            style={{ color: "rgba(255,255,255,0.35)" }}
           >
             {isNearby
-              ? `${areaLabel} · 총 ${shows.length}개 공연`
-              : `총 ${shows.length}개 공연`
+              ? `${areaLabel} · 총 ${displayTotal.toLocaleString()}개 공연`
+              : `총 ${displayTotal}개 공연`
             }
           </p>
         )}
@@ -384,15 +405,25 @@ export default function ShowsPage() {
             }
           </p>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 px-5">
-            {shows.map((s) => (
-              <PosterCard
-                key={s.id}
-                show={s}
-                onClick={() => router.push(buildDetailUrl(s))}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 px-5">
+              {shows.map((s) => (
+                <PosterCard
+                  key={s.id}
+                  show={s}
+                  onClick={() => router.push(buildDetailUrl(s))}
+                />
+              ))}
+            </div>
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onChange={(p) => {
+                setPage(p);
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            />
+          </>
         )}
 
       </main>

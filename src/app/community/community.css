@@ -1,0 +1,95 @@
+.community-post-card {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.community-post-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.community-room-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.community-room-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* FAB button — chatbot(56px) + gap(12px) 위에 적층 */
+.community-fab {
+  /* 모바일: nav(76px) + chatbot버튼(56px) + 위아래 여백 */
+  bottom: calc(76px + 56px + 24px);
+  right: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.community-fab:hover {
+  transform: scale(1.05) translateY(-2px);
+}
+.community-fab:active {
+  transform: scale(0.97);
+}
+
+@media (min-width: 1024px) {
+  .community-fab {
+    /* 데스크탑: chatbot(bottom-8=32px) + 버튼(56px) + 간격(12px) */
+    bottom: calc(32px + 56px + 12px);
+    right: 20px;
+  }
+}
+
+/* Hide scrollbar for category tabs */
+.community-tabs-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.community-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Modal animation */
+@keyframes community-slide-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes community-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.community-modal {
+  animation: community-slide-up 0.28s cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+.community-modal-overlay {
+  animation: community-fade-in 0.2s ease both;
+}
+
+@media (min-width: 1024px) {
+  .community-modal {
+    animation: community-fade-in 0.18s ease both;
+  }
+}
+
+/* Hero glow pulse */
+@keyframes hero-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+.community-hero-glow {
+  animation: hero-pulse 4s ease-in-out infinite;
+}
+
+/* Live dot blink */
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.community-live-dot {
+  animation: live-blink 1.5s ease-in-out infinite;
+}

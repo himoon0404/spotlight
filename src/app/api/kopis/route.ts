@@ -118,12 +118,16 @@ export async function GET(req: NextRequest) {
   const query      = req.nextUrl.searchParams.get("query") ?? "";
   const venueQuery = req.nextUrl.searchParams.get("venue") ?? "";
 
+  const page = Math.max(1, parseInt(req.nextUrl.searchParams.get("page") ?? "1", 10));
+  const rowsParam = req.nextUrl.searchParams.get("rows");
+  const ROWS = rowsParam ? Math.min(Math.max(parseInt(rowsParam, 10), 1), 100) : 20;
+
   const url = new URL(`${KOPIS_BASE}/pblprfr`);
   url.searchParams.set("service", apiKey);
   url.searchParams.set("stdate",  today());
   url.searchParams.set("eddate",  threeMonthsLater());
-  url.searchParams.set("rows",    "50");
-  url.searchParams.set("cpage",   "1");
+  url.searchParams.set("rows",    String(ROWS));
+  url.searchParams.set("cpage",   String(page));
   // prfstate 제거 — 예정/공연중 모두 조회
   if (code)       url.searchParams.set("signgucode",    code);
   if (subCode)    url.searchParams.set("signgucodesub", subCode);
@@ -143,20 +147,31 @@ export async function GET(req: NextRequest) {
 
     const blocks = xmlText.match(/<db>[\s\S]*?<\/db>/g) ?? [];
 
-    const items = blocks.map((block) => ({
-      id:        extractTag(block, "mt20id"),
-      title:     extractTag(block, "prfnm"),
-      place:     extractTag(block, "fcltynm"),
-      startDate: extractTag(block, "prfpdfrom"),
-      endDate:   extractTag(block, "prfpdto"),
-      poster:    validKopisPoster(extractTag(block, "poster")),
-      genre:     extractTag(block, "genrenm"),
-      state:     extractTag(block, "prfstate"),
-      region,
-    }));
+    const seen = new Set<string>();
+    const items = blocks
+      .map((block) => ({
+        id:        extractTag(block, "mt20id"),
+        title:     extractTag(block, "prfnm"),
+        place:     extractTag(block, "fcltynm"),
+        startDate: extractTag(block, "prfpdfrom"),
+        endDate:   extractTag(block, "prfpdto"),
+        poster:    validKopisPoster(extractTag(block, "poster")),
+        genre:     extractTag(block, "genrenm"),
+        state:     extractTag(block, "prfstate"),
+        region,
+      }))
+      .filter((item) => {
+        if (!item.id || seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
 
-    console.log("[/api/kopis] items=%d", items.length);
-    return NextResponse.json({ items });
+    const totalMatch = xmlText.match(/<totalcount>(\d+)<\/totalcount>/i);
+    const total = totalMatch ? parseInt(totalMatch[1], 10) : items.length;
+    const totalPages = Math.max(1, Math.ceil(total / ROWS));
+
+    console.log("[/api/kopis] items=%d total=%d page=%d/%d", items.length, total, page, totalPages);
+    return NextResponse.json({ items, total, page, totalPages });
 
   } catch (err) {
     console.error("[/api/kopis] fetch error:", err);

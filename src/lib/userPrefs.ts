@@ -1,3 +1,22 @@
+export interface NotificationPrefs {
+  bookingOpen: boolean;
+  lastChance: boolean;
+  newArtistShow: boolean;
+  nearbyShow: boolean;
+  moodRec: boolean;
+}
+
+export interface TasteScorePrefs {
+  emotional: number;
+  stimulation: number;
+  story: number;
+  performance: number;
+  solo: number;
+  social: number;
+  classic: number;
+  experimental: number;
+}
+
 export interface UserPrefs {
   name: string;
   genres: string[];
@@ -6,6 +25,12 @@ export interface UserPrefs {
   venueId?: string;
   venueName?: string;
   onboarded: boolean;
+  artists?: string[];
+  notifications?: NotificationPrefs;
+  hasCompletedTasteTest?: boolean;
+  tasteType?: string;
+  tasteScores?: TasteScorePrefs;
+  tasteCompletedAt?: string;
 }
 
 const KEY = "spotlight_prefs";

@@ -20,6 +20,39 @@ export interface ReviewData {
 
 export type ReviewStatus = "idle" | "pending" | "approved" | "rewarded";
 
+export type VerificationStatus = "none" | "pending" | "approved" | "rejected";
+
+export interface VerificationData {
+  reservationNumber: string;
+  ticketImageUrl: string;
+  watchedDate: string;
+}
+
+export interface ChallengeEntryState {
+  performanceId: string;
+  verificationStatus: VerificationStatus;
+  reservationNumber?: string;
+  ticketImageUrl?: string;
+  watchedDate?: string;
+  verifiedAt?: string;
+  rejectionReason?: string;
+  reviewStatus: ReviewStatus;
+  reviewText?: string;
+  rating?: number;
+  isRewarded: boolean;
+  isChallengeEntered: boolean;
+}
+
+export function defaultEntryState(performanceId: string): ChallengeEntryState {
+  return {
+    performanceId,
+    verificationStatus: "none",
+    reviewStatus: "idle",
+    isRewarded: false,
+    isChallengeEntered: false,
+  };
+}
+
 /* ─── 상수 ──────────────────────────────────────── */
 
 export const REGIONS = [
@@ -115,10 +148,20 @@ export function filterRewardSelectablePerformances(
 /* ─── 리뷰 제출 ─────────────────────────────────── */
 
 /**
+ * 관람 인증 제출
+ * TODO: POST /api/verify-attendance
+ */
+export async function submitVerification(
+  _performanceId: string,
+  _data: VerificationData
+): Promise<{ success: boolean }> {
+  await new Promise((r) => setTimeout(r, 800));
+  return { success: true };
+}
+
+/**
  * 리뷰 챌린지 제출
- * TODO: 실제 API 연동 시 아래 내부를 교체
- *   POST /api/review-challenge
- *   body: { performanceId, rating, text, userId }
+ * TODO: POST /api/review-challenge
  */
 export async function submitReviewChallenge(
   _performanceId: string,

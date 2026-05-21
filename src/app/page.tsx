@@ -11,6 +11,8 @@ import { GenreEditSheet } from "@/components/home/GenreEditSheet";
 import { RegionEditSheet } from "@/components/home/RegionEditSheet";
 import { VenueChips } from "@/components/filter/VenueChips";
 import { buildDetailUrl } from "@/app/shows/detail/[id]/page";
+import { MOOD_BUTTON_LIST } from "@/lib/moodTags";
+import { CurationSection } from "@/components/home/CurationSection";
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
 
@@ -67,24 +69,24 @@ function SectionHeader({
 }) {
   const router = useRouter();
   return (
-    <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
         {redDot && (
-          <span className="dday-urgent inline-block w-1.5 h-1.5 rounded-full bg-red-500" />
+          <span className="dday-urgent inline-block w-1.5 h-1.5 rounded-full bg-red-500 flex-none" />
         )}
-        {icon && <span className="text-sm leading-none">{icon}</span>}
+        {icon && <span className="text-base leading-none">{icon}</span>}
         <div>
           <span
-            className={`font-bold text-white/90 ${
+            className={`font-black text-white/92 ${
               redDot
-                ? "text-[12px] tracking-[0.22em] uppercase"
-                : "text-[15px] tracking-[0.04em]"
+                ? "text-[13px] tracking-[0.2em] uppercase"
+                : "text-[17px] tracking-[0.02em]"
             }`}
           >
             {label}
           </span>
           {sub && (
-            <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+            <p className="text-[12px] mt-0.5 leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
               {sub}
             </p>
           )}
@@ -93,7 +95,7 @@ function SectionHeader({
       {href && (
         <button
           onClick={() => router.push(href)}
-          className="text-[11px] text-white/30 hover:text-white/55 transition-colors"
+          className="text-[12px] font-medium text-white/32 hover:text-white/60 transition-colors flex-none"
         >
           전체보기 →
         </button>
@@ -146,19 +148,19 @@ function EditButton({ onClick, label }: { onClick: () => void; label: string }) 
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors"
+      className="flex items-center gap-1 px-2.5 py-1 rounded-full transition-colors"
       style={{
-        color: "rgba(255,255,255,0.35)",
+        color: "rgba(255,255,255,0.4)",
         border: "1px solid rgba(255,255,255,0.12)",
         background: "rgba(255,255,255,0.04)",
       }}
       aria-label={label}
     >
-      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
       </svg>
-      <span className="text-[10px]">편집</span>
+      <span className="text-[11px]">편집</span>
     </button>
   );
 }
@@ -197,40 +199,40 @@ function PersonalizedGreeting({
 
   return (
     <>
-      <div className="px-5 pt-3 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-        <p className="text-[11px] font-medium mb-2" style={{ color: "rgba(255,255,255,0.38)" }}>
+      <div className="px-5 pt-4 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <p className="text-[13px] font-semibold mb-3" style={{ color: "rgba(255,255,255,0.45)" }}>
           {greeting},{" "}
-          <span style={{ color: "rgba(251,191,36,0.85)" }}>{prefs.name}님</span>
+          <span style={{ color: "rgba(251,191,36,0.9)" }}>{prefs.name}님</span>
         </p>
 
         {/* 두 필터 행 */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
 
           {/* ── 관심 장르 ── */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.28)" }}>관심 장르:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] flex-none" style={{ color: "rgba(255,255,255,0.32)" }}>관심 장르</span>
             {prefs.genres.length > 0 ? (
               prefs.genres.slice(0, 3).map((g) => (
                 <span
                   key={g}
-                  className="text-[10px] px-2 py-0.5 rounded-full"
-                  style={{ color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.25)" }}
+                  className="text-[11px] px-2.5 py-0.5 rounded-full"
+                  style={{ color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.28)" }}
                 >
                   {g}
                 </span>
               ))
             ) : (
-              <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.25)" }}>전체</span>
+              <span className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>전체</span>
             )}
             <EditButton onClick={() => setGenreSheetOpen(true)} label="관심 장르 수정" />
           </div>
 
           {/* ── 공연장 지역 ── */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.28)" }}>공연장:</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] flex-none" style={{ color: "rgba(255,255,255,0.32)" }}>공연장</span>
             <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
-              style={{ color: "rgba(96,165,250,0.9)", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.25)" }}
+              className="text-[11px] px-2.5 py-0.5 rounded-full"
+              style={{ color: "rgba(96,165,250,0.9)", background: "rgba(96,165,250,0.1)", border: "1px solid rgba(96,165,250,0.28)" }}
             >
               📍 {selectedArea ? (selectedVenueName ? `${selectedArea} · ${selectedVenueName}` : selectedArea) : "전체 지역"}
             </span>
@@ -270,31 +272,31 @@ function EventCard({ ev }: { ev: typeof EVENTS[0] }) {
       style={{ background: ev.gradBg, border: `1px solid ${ev.accentBorder}` }}
       onClick={() => router.push(ev.route)}
     >
-      <div className="relative flex items-center gap-4 px-4 py-4">
+      <div className="relative flex items-center gap-4 px-4 py-5">
         <div
-          className="flex-none w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+          className="flex-none w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
           style={{ background: ev.accentBg, border: `1px solid ${ev.accentBorder}` }}
         >
           {ev.icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-white font-bold text-[13px] leading-tight mb-0.5">{ev.title}</h3>
-          <p className="text-[11px] leading-snug mb-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <h3 className="text-white font-bold text-[14px] leading-tight mb-1">{ev.title}</h3>
+          <p className="text-[12px] leading-snug mb-1.5" style={{ color: "rgba(255,255,255,0.5)" }}>
             {ev.desc}
           </p>
-          <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.28)" }}>{ev.hint}</p>
+          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>{ev.hint}</p>
         </div>
-        <div className="flex-none flex flex-col items-end gap-2">
+        <div className="flex-none flex flex-col items-end gap-2.5">
           <div className="text-right">
-            <p className="text-[13px] font-black" style={{ color: ev.accentColor }}>
+            <p className="text-[14px] font-black" style={{ color: ev.accentColor }}>
               {ev.reward}
             </p>
-            <p className="text-[9px] leading-tight" style={{ color: `${ev.accentColor}88` }}>
+            <p className="text-[10px] leading-tight mt-0.5" style={{ color: `${ev.accentColor}88` }}>
               {ev.rewardSub}
             </p>
           </div>
           <button
-            className="px-3 py-1.5 rounded-xl text-[10px] font-bold tracking-wide whitespace-nowrap"
+            className="px-3.5 py-1.5 rounded-xl text-[11px] font-bold tracking-wide whitespace-nowrap"
             style={{
               background: ev.accentBg,
               border: `1px solid ${ev.accentBorder}`,
@@ -305,6 +307,46 @@ function EventCard({ ev }: { ev: typeof EVENTS[0] }) {
             {ev.cta} →
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mood section ────────────────────────────────────────────────────────────
+
+function MoodSection({ onSelect }: { onSelect: (keyword: string) => void }) {
+  return (
+    <div className="px-5">
+      <div className="flex items-center gap-2.5 mb-4">
+        <span className="text-base leading-none">✨</span>
+        <div>
+          <span className="text-[17px] font-black tracking-[0.02em] text-white/92">오늘의 감성 추천</span>
+          <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+            공연명을 몰라도 분위기만으로 찾아보세요
+          </p>
+        </div>
+      </div>
+      <div
+        className="flex gap-2 overflow-x-auto pb-1 -mx-5 px-5"
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
+        {MOOD_BUTTON_LIST.map(({ label, keyword, emoji }) => (
+          <button
+            key={keyword}
+            onClick={() => onSelect(keyword)}
+            className="flex-none flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-semibold transition-all active:scale-95"
+            style={{
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.7)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span>{emoji}</span>
+            <span>{label}</span>
+          </button>
+        ))}
+        <div className="flex-none w-1" aria-hidden />
       </div>
     </div>
   );
@@ -357,12 +399,12 @@ function MapEntryCard() {
             </svg>
           </div>
           <div className="relative flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-[15px] font-black text-white">지도에서 찾기</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-[16px] font-black text-white">지도에서 찾기</p>
             </div>
             <p
-              className="text-[11px] leading-relaxed"
-              style={{ color: "rgba(255,255,255,0.36)" }}
+              className="text-[12px] leading-relaxed"
+              style={{ color: "rgba(255,255,255,0.4)" }}
             >
               내 주변 공연장과 공연을 한눈에 확인해보세요
             </p>
@@ -613,6 +655,47 @@ export default function HomePage() {
             />
           )}
 
+          {/* ── 취향 테스트 배너 ────────────────────────────────────────── */}
+          {prefs?.onboarded && !prefs?.hasCompletedTasteTest && (
+            <div className="px-5 mt-4 mb-1">
+              <button
+                onClick={() => router.push("/taste-test")}
+                className="w-full text-left rounded-2xl px-5 py-4 flex items-center gap-4 active:scale-[0.985] transition-transform"
+                style={{
+                  background: "linear-gradient(135deg, #001a00 0%, #000e00 60%, #0c0c0c 100%)",
+                  border: "1px solid rgba(57,255,20,0.2)",
+                  boxShadow: "0 0 20px rgba(57,255,20,0.06)",
+                }}
+              >
+                <div
+                  className="flex-none w-11 h-11 rounded-2xl flex items-center justify-center text-2xl"
+                  style={{
+                    background: "rgba(57,255,20,0.08)",
+                    border: "1px solid rgba(57,255,20,0.2)",
+                  }}
+                >
+                  🎭
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-bold text-white mb-0.5">공연 취향 분석하기</p>
+                  <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                    나의 공연 타입 발견하기 · 약 1분 소요
+                  </p>
+                </div>
+                <span
+                  className="flex-none text-[12px] font-black px-3 py-1.5 rounded-full"
+                  style={{
+                    background: "#39ff14",
+                    color: "#0c0c0c",
+                    boxShadow: "0 0 10px rgba(57,255,20,0.3)",
+                  }}
+                >
+                  시작
+                </span>
+              </button>
+            </div>
+          )}
+
           {/* ══ 관심 장르별 추천 ════════════════════════════════════════════ */}
           {genreLoading && (
             <section className="mt-5">
@@ -657,7 +740,11 @@ export default function HomePage() {
           {data?.popular && data.popular.length > 0 && (
             <section className={Object.keys(genreData).length > 0 || genreLoading ? "mt-8" : "mt-5"}>
               <div className="px-5">
-                <SectionHeader label="인기 공연" icon="🔥" href="/shows/popular" />
+                <SectionHeader
+                  label={selectedArea ? `${selectedArea} 인기 공연` : "인기 공연"}
+                  icon="🔥"
+                  href="/shows/popular"
+                />
               </div>
               <PosterRow shows={data.popular} />
             </section>
@@ -677,6 +764,9 @@ export default function HomePage() {
             </section>
           )}
 
+          {/* ══ 오늘의 큐레이션 ══════════════════════════════════════════════ */}
+          <CurationSection area={selectedArea} />
+
           {/* ══ 지도에서 찾기 ════════════════════════════════════════════════ */}
           <section className="mt-8 px-5">
             <MapEntryCard />
@@ -692,20 +782,27 @@ export default function HomePage() {
             </section>
           )}
 
+          {/* ══ 오늘의 감성 추천 ══════════════════════════════════════════════ */}
+          <section className="mt-8">
+            <MoodSection
+              onSelect={(kw) => router.push(`/search?keyword=${encodeURIComponent(kw)}`)}
+            />
+          </section>
+
           {/* ══ 내 공연장 근처 추천 ══════════════════════════════════════════ */}
           <section className="mt-8">
             {/* 헤더 */}
-            <div className="flex items-center justify-between px-5 mb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm leading-none">📍</span>
+            <div className="flex items-center justify-between px-5 mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="text-base leading-none">📍</span>
                 <div>
-                  <span className="text-[15px] font-bold tracking-[0.04em] text-white/90">
+                  <span className="text-[17px] font-black tracking-[0.02em] text-white/92">
                     {selectedVenueName
                       ? selectedVenueName
                       : prefs ? `${prefs.name}님 주변 공연` : "내 공연장 근처 추천"}
                   </span>
                   {selectedVenueName && (
-                    <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                    <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>
                       {selectedArea} 공연장
                     </p>
                   )}
@@ -713,7 +810,7 @@ export default function HomePage() {
               </div>
               <button
                 onClick={() => router.push("/shows/nearby")}
-                className="text-[11px] text-white/30 hover:text-white/55 transition-colors"
+                className="text-[12px] font-medium text-white/32 hover:text-white/60 transition-colors flex-none"
               >
                 전체보기 →
               </button>
@@ -730,13 +827,13 @@ export default function HomePage() {
                   <button
                     key={area}
                     onClick={() => handleAreaChange(area)}
-                    className="flex-none px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide transition-all"
+                    className="flex-none px-3.5 py-1.5 rounded-full text-[12px] font-semibold transition-all"
                     style={
                       active
                         ? { background: "rgba(255,255,255,0.9)", color: "#0c0c0c" }
                         : {
-                            background: "rgba(255,255,255,0.04)",
-                            color: "rgba(255,255,255,0.4)",
+                            background: "rgba(255,255,255,0.05)",
+                            color: "rgba(255,255,255,0.45)",
                             border: "1px solid rgba(255,255,255,0.1)",
                           }
                     }
@@ -770,16 +867,16 @@ export default function HomePage() {
               ) : (
                 <div className="px-5 py-8 flex flex-col items-center gap-2.5">
                   <span className="text-3xl leading-none">🏛️</span>
-                  <p className="text-[14px] text-center leading-relaxed" style={{ color: "rgba(255,255,255,0.28)" }}>
+                  <p className="text-[14px] text-center leading-relaxed" style={{ color: "rgba(255,255,255,0.35)" }}>
                     현재 이 공연장에 예정된 공연이 없어요
                   </p>
                   <button
                     onClick={() => { setSelectedVenueId(null); setSelectedVenueName(""); }}
-                    className="mt-1 px-4 py-1.5 rounded-full text-[11px] font-semibold"
+                    className="mt-1 px-5 py-2 rounded-full text-[12px] font-semibold"
                     style={{
                       background: "rgba(255,255,255,0.07)",
-                      color: "rgba(255,255,255,0.45)",
-                      border: "1px solid rgba(255,255,255,0.12)",
+                      color: "rgba(255,255,255,0.5)",
+                      border: "1px solid rgba(255,255,255,0.14)",
                     }}
                   >
                     전체 공연장으로 보기
@@ -801,7 +898,7 @@ export default function HomePage() {
           </section>
 
           {/* ══ 이벤트 ══════════════════════════════════════════════════════ */}
-          <section className="mt-8 px-5 pb-4">
+          <section className="mt-8 px-5 pb-6">
             <SectionHeader label="이벤트" icon="🎁" />
             <div className="flex flex-col gap-3">
               {EVENTS.map((ev) => (

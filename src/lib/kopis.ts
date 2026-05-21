@@ -80,6 +80,7 @@ const GENRE_THEME: [RegExp, ShowTheme][] = [
   [/무용|발레/, "purple"],
   [/클래식|오페라|서양음악|한국음악|국악/, "blue"],
   [/연극/, "red"],
+  [/어린이/, "emerald"],
 ];
 
 function themeFor(genre: string): ShowTheme {
@@ -156,6 +157,10 @@ function toProcessed(
     ...overrides,
   };
 }
+
+const CHILDREN_VENUE_RE = /아이들극장|어린이극장|어린이회관|어린이문화관|어린이센터|어린이아트홀|어린이극단/;
+const notChildrenShow = (s: ShowBlock) =>
+  !/어린이/.test(s.genre) && !CHILDREN_VENUE_RE.test(s.venue);
 
 // ─── Fetch ────────────────────────────────────────────────────────────────────
 
@@ -256,42 +261,83 @@ export async function fetchShows(
   const day3 = add(3);
   const day30 = add(30);
 
-  // 1. Box office — weekly top (nationwide) ─────────────────────────────────
-  // boxoffice API requires stdate+eddate range, not a single date param
-  const boxXml = await kFetch("boxoffice", {
+  // Kick off AAAB (어린이) ID fetch in parallel — resolves before enrichPosters
+  const childrenExclPromise = kFetch("pblprfr", {
     service: apiKey,
-    stdate: add(-7),
-    eddate: today,
-    catecode: "AAAA",
-  });
+    stdate: today,
+    eddate: add(180),
+    cpage: "1",
+    rows: "200",
+    prfstate: "02",
+    shcate: GENRE_SHCATE["어린이"],
+  }).catch(() => "");
 
-  const popular: ProcessedShow[] = blocks(boxXml, "boxof")
-    .slice(0, fullView ? 10 : 3)
-    .map((b, i) => {
-      const prfpd = tag(b, "prfpd");
-      const [from = "", rawTo = ""] = prfpd.split("~").map((s) => s.trim());
-      const to = rawTo || from;
-      const seatcnt = tag(b, "seatcnt");
-      return toProcessed(
-        {
-          id: tag(b, "mt20id"),
-          title: tag(b, "prfnm"),
-          from,
-          to,
-          venue: tag(b, "prfplcnm"),
-          poster: (() => { const u = tag(b, "poster").replace(/^http:/, "https:"); return isValidKopisPoster(u) ? u : ""; })(),
-          area: tag(b, "area"),
-          running: "",
-          genre: tag(b, "cate"),
-        },
-        {
-          rank: i + 1,
-          viewers: seatcnt && Number(seatcnt) > 0
-            ? `${Number(seatcnt).toLocaleString()}석 규모`
-            : undefined,
-        }
-      );
+  // 1. Popular shows — nationwide boxoffice OR region-specific pblprfr ──────────
+  // KOPIS boxoffice API does NOT support signgucode — it is a nationwide-only chart.
+  // When a region is selected we bypass it entirely and query pblprfr with signgucode.
+  let popular: ProcessedShow[] = [];
+
+  if (!areaCode) {
+    // No region selected → use the weekly nationwide boxoffice chart
+    const boxXml = await kFetch("boxoffice", {
+      service: apiKey,
+      stdate: add(-7),
+      eddate: today,
+      catecode: "AAAA",
     });
+    popular = blocks(boxXml, "boxof")
+      .slice(0, fullView ? 10 : 3)
+      .map((b, i) => {
+        const prfpd = tag(b, "prfpd");
+        const [from = "", rawTo = ""] = prfpd.split("~").map((s) => s.trim());
+        const to = rawTo || from;
+        const seatcnt = tag(b, "seatcnt");
+        return toProcessed(
+          {
+            id: tag(b, "mt20id"),
+            title: tag(b, "prfnm"),
+            from,
+            to,
+            venue: tag(b, "prfplcnm"),
+            poster: (() => { const u = tag(b, "poster").replace(/^http:/, "https:"); return isValidKopisPoster(u) ? u : ""; })(),
+            area: tag(b, "area"),
+            running: "",
+            genre: tag(b, "cate"),
+          },
+          {
+            rank: i + 1,
+            viewers: seatcnt && Number(seatcnt) > 0
+              ? `${Number(seatcnt).toLocaleString()}석 규모`
+              : undefined,
+          }
+        );
+      });
+  } else {
+    // Region selected → pblprfr with signgucode + area post-filter
+    // Post-filter removes the off-region shows KOPIS occasionally sneaks in.
+    const popKeyword = AREA_KEYWORD[areaCode] ?? "";
+    const popShort   = AREA_SHORT[areaCode]   ?? "";
+    const isInRegion = (s: ShowBlock) => {
+      if (!s.id) return false;
+      if (!popKeyword || !s.area) return true;
+      return s.area.includes(popKeyword) || (popShort ? s.area.includes(popShort) : false);
+    };
+
+    const popXml = await kFetch("pblprfr", {
+      service: apiKey,
+      stdate: today,
+      eddate: add(90),
+      cpage: "1",
+      rows: fullView ? "20" : "10",
+      signgucode: areaCode,
+    }).catch(() => "");
+
+    popular = blocks(popXml, "db")
+      .map(parseBlock)
+      .filter((s) => isInRegion(s) && notChildrenShow(s))
+      .slice(0, fullView ? 10 : 3)
+      .map((s, i) => toProcessed(s, { rank: i + 1 }));
+  }
 
   // 2. LAST CHANCE — ending within 3 days ────────────────────────────────────
   const lcParams: Record<string, string> = {
@@ -306,9 +352,10 @@ export async function fetchShows(
   if (subAreaCode) lcParams.signgucodesub = subAreaCode;
   const lcXml = await kFetch("pblprfr", lcParams);
 
-  const lastChance: ProcessedShow[] = blocks(lcXml, "db")
+  let lastChance: ProcessedShow[] = blocks(lcXml, "db")
     .map(parseBlock)
     .filter((s) => {
+      if (!notChildrenShow(s)) return false;
       const d = calcDday(s.to);
       return d !== null && d.value <= (fullView ? 7 : 3);
     })
@@ -388,12 +435,12 @@ export async function fetchShows(
 
   // Genre-matched shows come first; base shows fill remaining slots (deduped)
   const genreNearby = genreXml
-    ? blocks(genreXml, "db").map(parseBlock).filter(inArea)
+    ? blocks(genreXml, "db").map(parseBlock).filter((s) => inArea(s) && notChildrenShow(s))
     : [];
   const genreIds = new Set(genreNearby.map((s) => s.id));
   const baseNearby = blocks(nearbyXml, "db")
     .map(parseBlock)
-    .filter((s) => inArea(s) && !genreIds.has(s.id));
+    .filter((s) => inArea(s) && !genreIds.has(s.id) && notChildrenShow(s));
 
   let nearby: ProcessedShow[] = [...genreNearby, ...baseNearby]
     .slice(0, fullView ? 20 : 4)
@@ -404,7 +451,7 @@ export async function fetchShows(
   if (nearby.length === 0 && areaCode) {
     const rawAll = blocks(nearbyXml, "db")
       .map(parseBlock)
-      .filter((s) => Boolean(s.id));
+      .filter((s) => Boolean(s.id) && notChildrenShow(s));
     if (rawAll.length > 0) {
       nearby = rawAll.slice(0, fullView ? 20 : 4).map((s) => toProcessed(s));
     }
@@ -413,6 +460,18 @@ export async function fetchShows(
   // Fallback tier 2: truly no shows in this area — surface popular/lastChance
   if (nearby.length === 0) {
     nearby = [...lastChance, ...popular].slice(0, fullView ? 20 : 4);
+  }
+
+  // Apply AAAB exclusion: remove any show that KOPIS classifies as 어린이 from all other sections
+  const childrenExclXml = await childrenExclPromise;
+  const childrenIds = new Set(
+    blocks(childrenExclXml, "db").map(b => tag(b, "mt20id")).filter(Boolean)
+  );
+  if (childrenIds.size > 0) {
+    const excl = (arr: ProcessedShow[]) => arr.filter(s => !childrenIds.has(s.id));
+    popular     = excl(popular);
+    lastChance  = excl(lastChance);
+    nearby      = excl(nearby);
   }
 
   // Enrich any shows that came back without a poster URL
@@ -436,6 +495,7 @@ export const GENRE_SHCATE: Record<string, string> = {
   "재즈":    "CCCD",
   "인디음악":"CCCD",
   "무용":    "BBBE",
+  "어린이":  "AAAB",
 };
 
 // ─── Venue ───────────────────────────────────────────────────────────────────
@@ -632,7 +692,6 @@ export async function fetchShowsByGenre(
       eddate: end,
       cpage: "1",
       rows: String(rows),
-      prfstate: "02",
       shcate,
     };
     if (areaCode) params.signgucode = areaCode;
@@ -643,7 +702,7 @@ export async function fetchShowsByGenre(
       .map(parseBlock)
       .filter((s) => {
         if (!s.id) return false;
-        if (!keyword) return true;
+        if (!keyword || !s.area) return true;
         return s.area.includes(keyword) || (short ? s.area.includes(short) : false);
       })
       .map((s) => toProcessed(s));

@@ -6,6 +6,8 @@ import type { ProcessedShow, ShowTheme } from "@/types/show";
 import { PosterImage } from "@/components/ui/PosterImage";
 import { PosterCard } from "@/components/home/PosterCard";
 import type { ShowDetail } from "@/types/show";
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
+import { CuratorSection } from "@/components/shows/CuratorSection";
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -97,21 +99,21 @@ function ChevronIcon({ open }: { open: boolean }) {
 function InfoCard({ label, value }: { label: string; value: string }) {
   return (
     <div
-      className="rounded-xl px-3 py-2.5"
+      className="rounded-2xl px-4 py-3"
       style={{
         background: "rgba(255,255,255,0.04)",
-        border: "1px solid rgba(255,255,255,0.07)",
+        border: "1px solid rgba(255,255,255,0.08)",
       }}
     >
       <p
-        className="text-[10px] font-medium mb-0.5 uppercase tracking-wide"
-        style={{ color: "rgba(255,255,255,0.3)" }}
+        className="text-[11px] font-medium mb-1 uppercase tracking-wide"
+        style={{ color: "rgba(255,255,255,0.35)" }}
       >
         {label}
       </p>
       <p
-        className="text-[12px] font-semibold leading-snug"
-        style={{ color: "rgba(255,255,255,0.82)" }}
+        className="text-[13px] font-semibold leading-snug"
+        style={{ color: "rgba(255,255,255,0.85)" }}
       >
         {value}
       </p>
@@ -126,18 +128,18 @@ function DetailRow({
 }) {
   return (
     <div
-      className="flex gap-3 px-4 py-3"
+      className="flex gap-4 px-4 py-3.5"
       style={isLast ? {} : { borderBottom: "1px solid rgba(255,255,255,0.06)" }}
     >
       <span
-        className="text-[11px] font-medium flex-none w-14 pt-0.5"
-        style={{ color: "rgba(255,255,255,0.32)" }}
+        className="text-[12px] font-medium flex-none w-16 pt-0.5"
+        style={{ color: "rgba(255,255,255,0.35)" }}
       >
         {label}
       </span>
       <span
-        className="text-[13px] flex-1 leading-relaxed"
-        style={{ color: "rgba(255,255,255,0.78)" }}
+        className="text-[14px] flex-1 leading-relaxed"
+        style={{ color: "rgba(255,255,255,0.82)" }}
       >
         {value}
       </span>
@@ -194,6 +196,10 @@ function ShowDetailInner() {
   const [detailLoading, setDetailLoading] = useState(true);
   const [wishlist,        setWishlist]        = useState(false);
   const [alarmed,         setAlarmed]         = useState(false);
+
+  useEffect(() => {
+    if (id) setWishlist(isFavorite(id));
+  }, [id]);
   const [expanded,        setExpanded]        = useState(false);
   const [imagesExpanded,  setImagesExpanded]  = useState(false);
   const [showScrollTop,   setShowScrollTop]   = useState(false);
@@ -364,16 +370,16 @@ function ShowDetailInner() {
           <div className="px-5 pt-5 lg:px-0 lg:pt-0">
 
             {/* Title section */}
-            <div className="mb-4">
+            <div className="mb-5">
               <h1
-                className="text-[22px] font-black text-white leading-tight mb-2"
+                className="text-[24px] font-black text-white leading-tight mb-2"
               >
                 {title || "공연 정보 로딩 중…"}
               </h1>
               {venue && (
                 <p
-                  className="text-[13px] flex items-start gap-1"
-                  style={{ color: "rgba(255,255,255,0.45)" }}
+                  className="text-[14px] flex items-start gap-1.5"
+                  style={{ color: "rgba(255,255,255,0.48)" }}
                 >
                   <span>📍</span>
                   <span>{venue}</span>
@@ -394,8 +400,18 @@ function ShowDetailInner() {
             <div className="flex gap-2 mb-6">
               {/* 관심 등록 */}
               <button
-                onClick={() => setWishlist((v) => !v)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.97]"
+                onClick={() => {
+                  const next = toggleFavorite({
+                    id,
+                    title:     title,
+                    genre:     genre,
+                    venue:     venue,
+                    posterUrl: poster ?? undefined,
+                    theme:     themeFromUrl,
+                  });
+                  setWishlist(next);
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-[13px] font-semibold transition-all active:scale-[0.97]"
                 style={
                   wishlist
                     ? {
@@ -406,7 +422,7 @@ function ShowDetailInner() {
                     : {
                         background: "rgba(255,255,255,0.05)",
                         border: "1px solid rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.65)",
+                        color: "rgba(255,255,255,0.68)",
                       }
                 }
               >
@@ -417,7 +433,7 @@ function ShowDetailInner() {
               {/* 알림 받기 */}
               <button
                 onClick={() => setAlarmed((v) => !v)}
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-semibold transition-all active:scale-[0.97]"
+                className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-[13px] font-semibold transition-all active:scale-[0.97]"
                 style={
                   alarmed
                     ? {
@@ -428,7 +444,7 @@ function ShowDetailInner() {
                     : {
                         background: "rgba(255,255,255,0.05)",
                         border: "1px solid rgba(255,255,255,0.1)",
-                        color: "rgba(255,255,255,0.65)",
+                        color: "rgba(255,255,255,0.68)",
                       }
                 }
               >
@@ -438,7 +454,7 @@ function ShowDetailInner() {
 
               {/* 예매하기 */}
               <button
-                className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl text-[12px] font-bold transition-all active:scale-[0.97]"
+                className="flex-1 flex items-center justify-center gap-1.5 py-3.5 rounded-2xl text-[13px] font-bold transition-all active:scale-[0.97]"
                 style={{ background: "#ffffff", color: "#0c0c0c" }}
               >
                 <TicketIcon />
@@ -455,8 +471,8 @@ function ShowDetailInner() {
             {/* ── 공연 소개 ───────────────────────────────────────────────── */}
             <section className="mb-6">
               <h2
-                className="text-[12px] font-bold uppercase tracking-widest mb-3"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                className="text-[13px] font-bold uppercase tracking-[0.12em] mb-3"
+                style={{ color: "rgba(255,255,255,0.42)" }}
               >
                 공연 소개
               </h2>
@@ -471,7 +487,7 @@ function ShowDetailInner() {
               ) : story ? (
                 <div>
                   <p
-                    className="text-[14px] leading-[1.75] text-white/75"
+                    className="text-[15px] leading-[1.8] text-white/78"
                     style={
                       expanded
                         ? {}
@@ -511,8 +527,8 @@ function ShowDetailInner() {
             {/* ── 출연진 ─────────────────────────────────────────────────── */}
             <section className="mb-6">
               <h2
-                className="text-[12px] font-bold uppercase tracking-widest mb-3"
-                style={{ color: "rgba(255,255,255,0.35)" }}
+                className="text-[13px] font-bold uppercase tracking-[0.12em] mb-3"
+                style={{ color: "rgba(255,255,255,0.42)" }}
               >
                 출연진
               </h2>
@@ -532,11 +548,11 @@ function ShowDetailInner() {
                   {castList.map((name, i) => (
                     <span
                       key={i}
-                      className="px-3 py-1 rounded-full text-[12px]"
+                      className="px-3.5 py-1.5 rounded-full text-[13px]"
                       style={{
                         background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.09)",
-                        color: "rgba(255,255,255,0.68)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        color: "rgba(255,255,255,0.72)",
                       }}
                     >
                       {name}
@@ -617,6 +633,9 @@ function ShowDetailInner() {
                 </div>
               </section>
             )}
+
+            {/* ── 큐레이터 추천 · AI 요약 · 리뷰 ──────────────────────────── */}
+            <CuratorSection id={id} genre={genre} />
 
           </div>{/* end detail column */}
         </div>{/* end two-column grid */}
