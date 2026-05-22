@@ -21,6 +21,7 @@ const GENRE_SHCATE: Record<string, string> = {
   "재즈":    "CCCD",
   "인디음악":"CCCD",
   "무용":    "BBBE",
+  "어린이":  "AAAB",
 };
 
 // 지역명 (단·장명 모두) → KOPIS signgucode
